@@ -115,7 +115,7 @@ const SUPABASE_URL_DEFAULT  = ''; // <<< TU WKLEJ SWÓJ Project URL, np. 'https:
 const SUPABASE_ANON_DEFAULT = ''; // <<< TU WKLEJ SWÓJ anon public key, zaczyna się od 'ey...'
 // =================================================================================================
 
-let supa=null; let CACHE={clients:[], prices:{}, orders:[], items:[]}; const $=id=>document.getElementById(id);
+let supa=null; let CACHE={clients:[], prices:{}, orders:[], items:[]}; const $= (q) => document.querySelector(q.startsWith('#') ? q : '#'+q);
 const money=x=> (Number(x)||0).toFixed(2).replace('.',',')+' zł'; const today=()=> new Date().toISOString().slice(0,10);
 
 // PWA manifest (żeby można było dodać ikonę na ekran)
