@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SeedOrders – wspólna baza (Supabase)</title>
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" id="manifest-link">
+<style>
+body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e5e7eb;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:12px;margin:12px 0}
+h2{margin:0 0 8px 0}
+input,button,select,textarea{font:inherit;padding:10px;border-radius:10px;border:1px solid #374151;background:#0b1329;color:#e5e7eb}
+button{cursor:pointer;background:#2563eb;border-color:#1d4ed8}
+.grid{display:grid;gap:10px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.small{color:#9ca3af;font-size:.9rem}.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#0b1329;border:1px solid #1f2937}
+.row{display:flex;gap:8px;align-items:center}.right{margin-left:auto}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #374151;padding:8px}th{text-align:left;background:#0b1329}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="card row">
+    <div>
+      <b>🌱 SeedOrders – wspólna baza</b>
+      <div class="small">Połącz z Supabase (URL + anon key), a wszyscy będą widzieli te same dane. Możesz dodać skrót na ekran (PWA).</div>
+    </div>
+    <div>Status: <span class="badge" id="status">offline</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Połączenie z Supabase</h2>
+    <div class="small" style="margin-bottom:6px">Te pola zostaną zapamiętane w przeglądarce. <span id="msgConn"></span></div>
+    <div class="grid g3">
+      <input id="url" placeholder="Supabase URL (https://xxxx.supabase.co)">
+      <input id="key" placeholder="Anon public key (ey...)">
+      <button id="connect">Połącz i zapamiętaj</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cennik (seedorders_prices)</h2>
+    <div class="grid g3">
+      <input id="p_var" placeholder="Odmiana">
+      <input id="p_cat" placeholder="Kategoria" value="Rzepak">
+      <input id="p_price" type="number" step="0.01" placeholder="Cena">
+    </div>
+    <div class="grid g2" style="margin-top:8px">
+      <input id="p_sup" placeholder="Dostawca (opcjonalnie)">
+      <button id="p_save">Zapisz / zaktualizuj</button>
+    </div>
+    <div class="row small" style="margin-top:8px"><div class="right"><button id="p_reload">Odśwież listę</button></div></div>
+    <div id="p_list" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Kontrahenci (seedorders_clients)</h2>
+    <div class="grid g3">
+      <input id="c_name" placeholder="Nazwa kontrahenta">
+      <input id="c_phone" placeholder="Telefon (opcjonalnie)">
+      <button id="c_add">Dodaj</button>
+    </div>
+    <div class="row small" style="margin-top:8px">
+      <input id="c_search" placeholder="Szukaj kontrahenta…" style="flex:1">
+      <div class="right"><button id="c_reload">Odśwież listę</button></div>
+    </div>
+    <div id="c_list" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Dodaj zamówienie (seedorders_orders + seedorders_items)</h2>
+    <div class="grid g3">
+      <input id="o_client" list="dl_clients" placeholder="Kontrahent (wybierz lub wpisz nowego)">
+      <datalist id="dl_clients"></datalist>
+      <input id="o_phone" placeholder="Telefon (auto z kartoteki, można wpisać)">
+      <select id="o_cat">
+        <option value="Rzepak">Rzepak</option><option value="Kukurydza">Kukurydza</option><option value="Zboża">Zboża</option><option value="Inne">Inne</option>
+      </select>
+    </div>
+    <div class="grid g3" style="margin-top:8px">
+      <input id="o_var" list="dl_var" placeholder="Odmiana"><datalist id="dl_var"></datalist>
+      <input id="o_qty" type="number" min="1" value="1" placeholder="Ilość">
+      <input id="o_price" type="number" step="0.01" placeholder="Cena / szt.">
+    </div>
+    <div class="grid g3" style="margin-top:8px">
+      <input id="o_sup" placeholder="Dostawca (opcjonalnie)">
+      <input id="o_note" placeholder="Uwagi (opcjonalnie)">
+      <button id="o_add">Dodaj pozycję</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zamówienia (ostatnie)</h2>
+    <div class="row small">
+      <input id="o_search" placeholder="Szukaj: klient/odmiana/uwagi…" style="flex:1">
+      <select id="o_status">
+        <option value="wszystkie">Wszystkie statusy</option>
+        <option value="nowe">Nowe</option>
+        <option value="zamówione">Zamówione</option>
+        <option value="dostarczone">Dostarczone</option>
+        <option value="anulowane">Anulowane</option>
+      </select>
+      <button id="o_reload">Odśwież</button>
+    </div>
+    <div id="o_list" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card row">
+    <div class="small">📲 Zainstaluj: w przeglądarce wybierz „Dodaj do ekranu głównego” (Android/Safari) lub „Zainstaluj tę aplikację” (Chrome/Edge).</div>
+    <button id="installBtn" class="right">Zainstaluj teraz</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2.45.1/dist/umd/supabase.js"></script>
+<script>
+// ======= KONFIG: WSTAW SWOJE DANE SUPABASE (albo zostaw '', wtedy uzupełnisz w formularzu) =======
+const SUPABASE_URL_DEFAULT  = ''; // <<< TU WKLEJ SWÓJ Project URL, np. 'https://abcde.supabase.co'
+const SUPABASE_ANON_DEFAULT = ''; // <<< TU WKLEJ SWÓJ anon public key, zaczyna się od 'ey...'
+// =================================================================================================
+
+let supa=null; let CACHE={clients:[], prices:{}, orders:[], items:[]}; const $=id=>document.getElementById(id);
+const money=x=> (Number(x)||0).toFixed(2).replace('.',',')+' zł'; const today=()=> new Date().toISOString().slice(0,10);
+
+// PWA manifest (żeby można było dodać ikonę na ekran)
+(function(){
+  const manifest={name:'SeedOrders',short_name:'SeedOrders',start_url:'.',display:'standalone',background_color:'#0b1020',theme_color:'#0b1020',icons:[]};
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  document.getElementById('manifest-link').setAttribute('href', url);
+  if('serviceWorker' in navigator){
+    const sw = `
+      self.addEventListener('install', e=> self.skipWaiting());
+      self.addEventListener('activate', e=> clients.claim());
+      self.addEventListener('fetch', ()=>{});`;
+    const swUrl = URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
+    navigator.serviceWorker.register(swUrl);
+  }
+})();
+
+// PWA „Install” prompt
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; $('#installBtn').disabled=false; });
+$('#installBtn').onclick=async()=>{ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; } };
+
+function saveCreds(){ localStorage.setItem('sb_url', $('#url').value.trim()); localStorage.setItem('sb_key', $('#key').value.trim()); }
+function loadCreds(){
+  const u = localStorage.getItem('sb_url') || SUPABASE_URL_DEFAULT;
+  const k = localStorage.getItem('sb_key') || SUPABASE_ANON_DEFAULT;
+  $('#url').value = u; $('#key').value = k;
+}
+loadCreds();
+
+$('#connect').onclick=()=>{
+  const url=$('#url').value.trim(), key=$('#key').value.trim();
+  if(!url||!key){ $('#msgConn').textContent='Wklej URL i anon key z Supabase.'; return; }
+  supa = window.supabase.createClient(url, key);
+  saveCreds();
+  $('#status').textContent='online';
+  $('#msgConn').textContent='Połączono. Odśwież: Cennik, Kontrahenci, Zamówienia.';
+  reloadAll();
+};
+
+async function reloadAll(){ await Promise.all([loadPrices(), loadClients(), loadOrders()]); }
+
+// ===== Cennik
+async function loadPrices(){
+  const { data, error } = await supa.from('seedorders_prices').select('*').order('odmiana');
+  if(error){ $('#p_list').textContent='Błąd: '+error.message; return; }
+  CACHE.prices={}; const rows=data||[]; rows.forEach(r=> CACHE.prices[r.odmiana]={kategoria:r.kategoria,cena:Number(r.cena||0),dostawca:r.dostawca||''});
+  $('#p_list').innerHTML = rows.length? ('<table><tr><th>Odmiana</th><th>Kategoria</th><th>Cena</th><th>Dostawca</th></tr>'+
+    rows.map(r=>`<tr><td>${r.odmiana}</td><td>${r.kategoria}</td><td>${money(r.cena)}</td><td>${r.dostawca||''}</td></tr>`).join('')+'</table>') : '(brak wpisów)';
+  const dl=$('dl_var'); dl.innerHTML=''; rows.forEach(r=>{ const o=document.createElement('option'); o.value=r.odmiana; dl.appendChild(o); });
+}
+$('#p_reload').onclick=loadPrices;
+$('#p_save').onclick=async()=>{
+  if(!supa) return alert('Najpierw Połącz.');
+  const odm=$('#p_var').value.trim(); if(!odm) return alert('Podaj odmianę');
+  const row={ odmiana:odm, kategoria: $('#p_cat').value.trim()||'Inne', cena: Number($('#p_price').value||0), dostawca: ($('#p_sup').value||'').trim()||null };
+  const { error } = await supa.from('seedorders_prices').upsert(row);
+  if(error) alert('Błąd: '+error.message); else { alert('Zapisano.'); loadPrices(); }
+};
+
+// ===== Kontrahenci
+async function loadClients(){
+  const { data, error } = await supa.from('seedorders_clients').select('*').order('name');
+  if(error){ $('#c_list').textContent='Błąd: '+error.message; return; }
+  CACHE.clients=data||[];
+  const q=($('#c_search').value||'').toLowerCase();
+  const rows=CACHE.clients.filter(c=> [c.name,c.phone,c.address,c.nip,c.notes].filter(Boolean).join(' ').toLowerCase().includes(q));
+  $('#c_list').innerHTML = rows.length? ('<table><tr><th>Nazwa</th><th>Telefon</th></tr>'+rows.map(c=>`<tr><td>${c.name}</td><td>${c.phone||''}</td></tr>`).join('')+'</table>'):'(brak kontrahentów)';
+  const dl=$('dl_clients'); dl.innerHTML=''; CACHE.clients.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; dl.appendChild(o); });
+}
+$('#c_reload').onclick=loadClients;
+$('#c_search').oninput=loadClients;
+$('#c_add').onclick=async()=>{
+  if(!supa) return alert('Najpierw Połącz.');
+  const name=$('#c_name').value.trim(); if(!name) return alert('Podaj nazwę');
+  const row={ name, phone: ($('#c_phone').value||'').trim()||null };
+  const { error } = await supa.from('seedorders_clients').insert([row]);
+  if(error) alert('Błąd: '+error.message); else { alert('Dodano.'); $('#c_name').value=''; $('#c_phone').value=''; loadClients(); }
+};
+
+// Auto uzupełnianie
+$('#o_client').addEventListener('change', ()=>{
+  const name=($('#o_client').value||'').trim();
+  const cl=CACHE.clients.find(c=> c.name.toLowerCase()===name.toLowerCase());
+  if(cl && cl.phone) $('#o_phone').value=cl.phone;
+});
+$('#o_var').addEventListener('change', ()=>{
+  const v=$('#o_var').value; if(CACHE.prices[v]){ $('#o_cat').value=CACHE.prices[v].kategoria; $('#o_price').value=CACHE.prices[v].cena; $('#o_sup').value=CACHE.prices[v].dostawca||''; }
+});
+
+// ===== Zamówienia
+async function loadOrders(){
+  const [o,i] = await Promise.all([
+    supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(50),
+    supa.from('seedorders_items').select('*')
+  ]);
+  CACHE.orders=o.data||[]; CACHE.items=i.data||[];
+  renderOrders();
+}
+function itemsFor(id){ return CACHE.items.filter(p=> p.order_id===id); }
+function renderOrders(){
+  const q=($('#o_search').value||'').toLowerCase(); const st=$('#o_status').value;
+  const box=$('#o_list'); box.innerHTML='';
+  let arr=CACHE.orders.slice();
+  if(st!=='wszystkie') arr=arr.filter(o=> o.status===st);
+  if(q) arr=arr.filter(o=>{
+    const text=[o.klient,o.telefon||'',o.uwagi||'',...itemsFor(o.id).map(p=>p.odmiana)].join(' ').toLowerCase();
+    return text.includes(q);
+  });
+  if(!arr.length){ box.innerHTML='<div class="small">(brak zamówień)</div>'; return; }
+  arr.forEach(o=>{
+    const its=itemsFor(o.id); const val=its.reduce((a,b)=> a + Number(b.cena||0)*(b.ilość||0), 0);
+    const div=document.createElement('div'); div.className='card';
+    div.innerHTML = `<div class="row"><b>${o.data||''}</b> <span class="badge">${o.status}</span> <div class="right">${o.klient} ${o.telefon?('• '+o.telefon):''}</div></div>`+
+      its.map(p=>`<div class="row" style="margin-top:6px"><div><b>${p.odmiana}</b> <span class="badge">${p.kategoria}</span>${p.dostawca?(' <span class="badge">'+p.dostawca+'</span>'):''}</div><div class="right">× ${p.ilość} • ${money(p.cena)}</div></div>`).join('')+
+      `<div class="row small" style="margin-top:6px"><div>Uwagi: ${o.uwagi||'-'}</div><div class="right"><b>Wartość: ${money(val)}</b></div></div>`+
+      `<div class="row small" style="margin-top:6px">
+        <select data-id="${o.id}" class="st">
+          <option value="nowe">nowe</option><option value="zamówione">zamówione</option><option value="dostarczone">dostarczone</option><option value="anulowane">anulowane</option>
+        </select>
+        <button data-id="${o.id}" class="del">Usuń zamówienie</button>
+      </div>`;
+    box.appendChild(div);
+    div.querySelector('.st').value=o.status;
+    div.querySelector('.st').addEventListener('change', async (e)=>{
+      await supa.from('seedorders_orders').update({status:e.target.value}).eq('id', o.id); loadOrders();
+    });
+    div.querySelector('.del').addEventListener('click', async ()=>{
+      if(confirm('Usunąć zamówienie?')){ await supa.from('seedorders_orders').delete().eq('id', o.id); loadOrders(); }
+    });
+  });
+}
+$('#o_reload').onclick=loadOrders; $('#o_search').oninput=renderOrders; $('#o_status').onchange=renderOrders;
+
+$('#o_add').onclick=async()=>{
+  if(!supa) return alert('Najpierw Połącz.');
+  const klient=($('#o_client').value||'').trim(); if(!klient) return alert('Podaj kontrahenta');
+  const telefon=($('#o_phone').value||'').trim()||null;
+  const kategoria=$('#o_cat').value;
+  const odm=($('#o_var').value||'').trim(); if(!odm) return alert('Podaj odmianę');
+  const qty=Math.max(1, parseInt(($('#o_qty').value||'1'),10));
+  const cena=Number($('#o_price').value|| (CACHE.prices[odm]?.cena||0) );
+  const dost=($('#o_sup').value|| CACHE.prices[odm]?.dostawca || '').trim() || null;
+  const uw=($('#o_note').value||'').trim()||null;
+  // kontrahent auto-create jeśli brak
+  let cl=CACHE.clients.find(c=> c.name.toLowerCase()===klient.toLowerCase());
+  if(!cl){
+    const ins=await supa.from('seedorders_clients').insert([{name:klient, phone:telefon}]).select('*').single();
+    if(!ins.error) cl=ins.data;
+  }
+  // zamówienie dla dziś lub nowe
+  let ord=CACHE.orders.find(o=> o.klient.toLowerCase()===klient.toLowerCase() && o.data===today() && o.status!=='anulowane');
+  if(!ord){
+    const base={data:today(), klient, telefon, uwagi:uw, status:'nowe', client_id: cl?.id||null};
+    const ins=await supa.from('seedorders_orders').insert([base]).select('*').single();
+    if(ins.error){ alert('Błąd tworzenia zamówienia: '+ins.error.message); return; }
+    ord=ins.data;
+  }else{
+    const patch={}; if(telefon) patch.telefon=telefon; if(uw) patch.uwagi=(ord.uwagi?ord.uwagi+' | ':'')+uw; if(cl?.id) patch.client_id=cl.id;
+    if(Object.keys(patch).length) await supa.from('seedorders_orders').update(patch).eq('id', ord.id);
+  }
+  const ins2=await supa.from('seedorders_items').insert([{order_id:ord.id,kategoria,odmiana:odm,"ilość":qty,cena,dostawca:dost}]);
+  if(ins2.error){ alert('Błąd pozycji: '+ins2.error.message); return; }
+  alert('Dodano pozycję.');
+  $('#o_var').value=''; $('#o_qty').value='1'; $('#o_price').value=''; $('#o_note').value='';
+  loadOrders(); loadClients();
+};
+
+// Auto start jeśli mamy zapisane klucze lub wpisane na stałe
+if(($('#url').value && $('#key').value)){ $('#connect').click(); }
+</script>
+</body></html>
