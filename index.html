@@ -111,8 +111,8 @@ table{border-collapse:collapse;width:100%}th,td{border:1px solid #374151;padding
 <script src="https://unpkg.com/@supabase/supabase-js@2.45.1/dist/umd/supabase.js"></script>
 <script>
 // ======= KONFIG: WSTAW SWOJE DANE SUPABASE (albo zostaw '', wtedy uzupełnisz w formularzu) =======
-const SUPABASE_URL_DEFAULT  = ''; // <<< TU WKLEJ SWÓJ Project URL, np. 'https://abcde.supabase.co'
-const SUPABASE_ANON_DEFAULT = ''; // <<< TU WKLEJ SWÓJ anon public key, zaczyna się od 'ey...'
+const SUPABASE_URL_DEFAULT  = 'https://llatxyfdpurbniewhjft.supabase.co'; // <<< TU WKLEJ SWÓJ Project URL, np. 'https://abcde.supabase.co'
+const SUPABASE_ANON_DEFAULT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXR4eWZkcHVyYm5pZXdoamZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzA1NzgsImV4cCI6MjA3MTI0NjU3OH0.Q8EJPQN-XsgRnw6dltGUS-DGcf8SiMAX886NUQAcDqY'; // <<< TU WKLEJ SWÓJ anon public key, zaczyna się od 'ey...'
 // =================================================================================================
 
 let supa=null; let CACHE={clients:[], prices:{}, orders:[], items:[]}; const $= (q) => document.querySelector(q.startsWith('#') ? q : '#'+q);
