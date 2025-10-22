@@ -289,3 +289,222 @@ $('#o_add').onclick=async()=>{
 if(($('#url').value && $('#key').value)){ $('#connect').click(); }
 </script>
 </body></html>
+
+
+<!-- ===== SeedOrders: Raporty, częściowe wydania i adresy (beta) ===== -->
+<style>
+  .so-card{background:#111827;padding:16px;border-radius:14px;margin:18px 0;color:#e5e7eb;border:1px solid #1f2937}
+  .so-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .so-row label{font-size:12px;opacity:.85}
+  .so-row input,.so-row select,.so-row button{padding:8px 10px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
+  .so-row button{cursor:pointer}
+  .so-table{width:100%;border-collapse:collapse;margin-top:10px}
+  .so-table th,.so-table td{border:1px solid #374151;padding:8px}
+  .so-table th{background:#0b1220}
+  .so-muted{opacity:.8;font-size:12px}
+</style>
+<div id="so-panel"></div>
+
+<script>
+(async function seedordersEnhancements(){
+  // 1) Upewnij się, że mamy supabase-js
+  async function ensureSupabase(){
+    if (window.supabase && window.supabase.createClient) return window.supabase;
+    await new Promise(r=>{
+      const s=document.createElement('script');
+      s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.0/dist/umd/supabase.js";
+      s.onload=r; document.head.appendChild(s);
+    });
+    return window.supabase;
+  }
+
+  // 2) Pobierz URL/anon key z localStorage lub z pól połączenia na stronie
+  function getConn(){
+    const candidates = [
+      // popularne klucze
+      ['seedorders_supabase_url','seedorders_supabase_anon'],
+      ['supabaseUrl','supabaseKey'],
+      ['supabase_url','supabase_anon']
+    ];
+    let url=null,key=null;
+    for (const [ku,kk] of candidates){
+      url = url || localStorage.getItem(ku);
+      key = key || localStorage.getItem(kk);
+    }
+    // spróbuj podejrzeć pola w UI (sekcja "Połączenie z Supabase")
+    if(!url || !key){
+      const inputs = Array.from(document.querySelectorAll('input,textarea'));
+      const guessUrl = inputs.find(i=>/^https:\/\/.+\.supabase\.co\/?$/.test(i.value || ''));
+      const guessKey = inputs.find(i=>(i.value||'').startsWith('eyJ'));
+      url = url || (guessUrl && guessUrl.value.trim());
+      key = key || (guessKey && guessKey.value.trim());
+    }
+    return {url, key};
+  }
+
+  // 3) Utwórz klienta
+  const SB = await ensureSupabase();
+  const {url, key} = getConn();
+  if(!url || !key){
+    console.warn('Brak URL/anon key – uzupełnij na górze strony i odśwież (Ctrl+F5).');
+    const panel = document.getElementById('so-panel');
+    panel.innerHTML = '<div class="so-card">⚠️ Najpierw wpisz Supabase URL i anon key w sekcji połączenia u góry strony, kliknij „Połącz i zapamiętaj”, a następnie odśwież stronę.</div>';
+    return;
+  }
+  const client = SB.createClient(url, key);
+
+  // 4) UI panel
+  const root = document.getElementById('so-panel');
+  root.innerHTML = `
+    <div class="so-card">
+      <div style="font-weight:700;font-size:16px;margin-bottom:6px">📊 Raporty & 🚚 Wydania (beta)</div>
+      <div class="so-row">
+        <div>
+          <label>Od</label><br/>
+          <input type="date" id="so-from"/>
+        </div>
+        <div>
+          <label>Do</label><br/>
+          <input type="date" id="so-to"/>
+        </div>
+        <div>
+          <label>Kategoria</label><br/>
+          <select id="so-cat">
+            <option value="">(Wszystkie)</option>
+            <option>Rzepak</option>
+            <option>Kukurydza</option>
+            <option>Zboża</option>
+            <option>Inne</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button id="so-run">Pokaż sumy</button>
+        </div>
+      </div>
+      <div id="so-out" class="so-muted">Wybierz zakres i kliknij „Pokaż sumy”.</div>
+
+      <hr style="border-color:#1f2937;margin:14px 0">
+
+      <div style="font-weight:600">Częściowe wydanie pozycji</div>
+      <div class="so-row">
+        <div>
+          <label>ID pozycji (UUID)</label><br/>
+          <input id="so-itemid" placeholder="np. 9b58..."/>
+        </div>
+        <div>
+          <label>Ile wydać teraz</label><br/>
+          <input id="so-delta" type="number" step="0.001" value="1"/>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button id="so-ship">Wydaj</button>
+        </div>
+      </div>
+      <div id="so-ship-out" class="so-muted">Podaj ID pozycji z tabeli „seedorders_items 1” i ilość do wydania.</div>
+
+      <hr style="border-color:#1f2937;margin:14px 0">
+
+      <div style="font-weight:600">Adres kontrahenta</div>
+      <div class="so-row">
+        <div><label>Nazwa (dokładnie)</label><br/><input id="so-cl-name" placeholder="np. Rolmix Sp. z o.o."/></div>
+        <div><label>Ulica</label><br/><input id="so-street"/></div>
+        <div><label>Kod</label><br/><input id="so-postal"/></div>
+        <div><label>Miejscowość</label><br/><input id="so-city"/></div>
+        <div><label>Kraj</label><br/><input id="so-country" value="Polska"/></div>
+        <div style="display:flex;align-items:flex-end"><button id="so-save-addr">Zapisz adres</button></div>
+      </div>
+      <div id="so-addr-out" class="so-muted">Wpisz nazwę dokładnie tak, jak w bazie (seedorders_clients → name).</div>
+    </div>
+  `;
+
+  // 5) Pomoce
+  function fmt(n){ return (n??0).toLocaleString('pl-PL'); }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function firstDayOfMonth(){
+    const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0,10);
+  }
+  // domyślne daty
+  document.getElementById('so-from').value = firstDayOfMonth();
+  document.getElementById('so-to').value = today();
+
+  // 6) Akcje – Raporty
+  async function runReport(){
+    const p_from = document.getElementById('so-from').value || today();
+    const p_to   = document.getElementById('so-to').value   || today();
+    const catSel = document.getElementById('so-cat').value || null;
+
+    const out = document.getElementById('so-out');
+    out.textContent = 'Liczenie…';
+
+    const { data: rows, error: e1 } = await client.rpc('report_sums_items_only', {
+      p_from, p_to, p_category: catSel || null
+    });
+    if(e1){ out.textContent = 'Błąd: '+e1.message; return; }
+
+    const { data: tot, error: e2 } = await client.rpc('report_totals_items_only', {
+      p_from, p_to, p_category: catSel || null
+    });
+    if(e2){ out.textContent = 'Błąd totals: '+e2.message; return; }
+
+    let html = `<table class="so-table"><thead><tr>
+      <th>Kategoria</th><th>Odmiana</th><th>Zamówiono</th><th>Wydano</th><th>Pozostało</th>
+    </tr></thead><tbody>`;
+    for(const r of (rows||[])){
+      html += `<tr>
+        <td>${r.kategoria||''}</td>
+        <td>${r.odmiana||''}</td>
+        <td style="text-align:right">${fmt(r.ordered_sum)}</td>
+        <td style="text-align:right">${fmt(r.delivered_sum)}</td>
+        <td style="text-align:right">${fmt(r.remaining_sum)}</td>
+      </tr>`;
+    }
+    const T = (tot && tot[0]) || {ordered_total:0, delivered_total:0, remaining_total:0};
+    html += `</tbody><tfoot><tr>
+      <th colspan="2" style="text-align:right">RAZEM</th>
+      <th style="text-align:right">${fmt(T.ordered_total)}</th>
+      <th style="text-align:right">${fmt(T.delivered_total)}</th>
+      <th style="text-align:right">${fmt(T.remaining_total)}</th>
+    </tr></tfoot></table>`;
+    out.innerHTML = html;
+  }
+  document.getElementById('so-run').addEventListener('click', runReport);
+
+  // 7) Akcja – Częściowe wydanie
+  document.getElementById('so-ship').addEventListener('click', async ()=>{
+    const id = document.getElementById('so-itemid').value.trim();
+    const delta = parseFloat(document.getElementById('so-delta').value);
+    const box = document.getElementById('so-ship-out');
+    if(!id || !Number.isFinite(delta)){ box.textContent='Uzupełnij ID i liczbę.'; return; }
+    box.textContent='Wydaję…';
+    const { data, error } = await client.rpc('upsert_delivery_simple', {
+      p_item_id: id, p_delta: delta
+    });
+    if(error){ box.textContent='Błąd: '+error.message; return; }
+    const r = (data&&data[0])||{};
+    box.textContent = `OK. Wydano: ${fmt(delta)}. Teraz: zamówiono ${fmt(r.ordered_qty)}, wydano ${fmt(r.delivered_qty)}, zostało ${fmt(r.remaining_qty)}.`;
+    // odśwież raport po wydaniu
+    runReport().catch(()=>{});
+  });
+
+  // 8) Akcja – Zapis adresu kontrahenta
+  document.getElementById('so-save-addr').addEventListener('click', async ()=>{
+    const name = document.getElementById('so-cl-name').value.trim();
+    const street = document.getElementById('so-street').value.trim() || null;
+    const postal = document.getElementById('so-postal').value.trim() || null;
+    const city   = document.getElementById('so-city').value.trim() || null;
+    const country= document.getElementById('so-country').value.trim() || null;
+    const out = document.getElementById('so-addr-out');
+    if(!name){ out.textContent='Podaj nazwę klienta dokładnie jak w bazie.'; return; }
+    out.textContent='Zapisuję…';
+    // spróbuj update po name (jeśli masz id – możesz zmienić eq('id',…))
+    const { error } = await client.from('seedorders_clients')
+      .update({ street, postal_code: postal, city, country })
+      .eq('name', name);
+    out.textContent = error ? ('Błąd: '+error.message) : 'Adres zapisany ✅';
+  });
+
+  // automatycznie pokaż raport bieżącego miesiąca
+  runReport().catch(()=>{});
+})();
+</script>
+<!-- ===== /SeedOrders: Raporty, częściowe wydania i adresy (beta) ===== -->
+
