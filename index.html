@@ -592,75 +592,95 @@ async function runReport(mode='sum'){
     html += `</table><div class="small muted" style="margin-top:6px">Zakres: ${p_from} – ${p_to}</div>`;
     out.innerHTML = html;
   }else{
-    // braki (pozostało > 0)
-    const { data:rows, error } = await supa.rpc('report_sums_items_only', { p_from, p_to, p_category: p_cat });
-    if(error){ out.innerHTML='<div class="small bad">Błąd: '+error.message+'</div>'; return; }
-    const miss = (rows||[]).filter(r=>(r.remaining_sum||0)>0);
-    let html = miss.length ? `<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th>Pozostało</th></tr></thead><tbody>` : `<div class="small ok">Brak braków.</div>`;
-    if(miss.length){ miss.forEach(r=>{ html += `<tr><td>${r.kategoria||''}</td><td>${r.odmiana||''}</td><td style="text-align:right">${fmt(r.remaining_sum||0)}</td></tr>`; }); html+='</tbody></table>'; }
-    html += `<div class="small muted" style="margin-top:6px">Zakres: ${p_from} – ${p_to}</div>`;
+       // braki (pozostało > 0)
+    const { data: rows, error } = await supa.rpc('report_sums_items_only', { p_from, p_to, p_category: p_cat });
+    if (error) { out.innerHTML = '<div class="small bad">Błąd: ' + error.message + '</div>'; return; }
+    const miss = (rows || []).filter(r => (r.remaining_sum || 0) > 0);
+    let html = miss.length
+      ? '<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th>Pozostało</th></tr></thead><tbody>'
+      : '<div class="small ok">Brak braków.</div>';
+    if (miss.length) {
+      miss.forEach(r => {
+        html += '<tr><td>' + (r.kategoria || '') + '</td><td>' + (r.odmiana || '') + '</td><td style="text-align:right">' + fmt(r.remaining_sum || 0) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '<div class="small muted" style="margin-top:6px">Zakres: ' + p_from + ' – ' + p_to + '</div>';
     out.innerHTML = html;
   }
-}
-$('#r_sum').onclick=()=>runReport('sum');
-$('#r_missing').onclick=()=>runReport('missing');
+} // ← koniec funkcji runReport
 
-$('#ryear_btn').onclick=async ()=>{
-  const year = Number($('#ryear').value)||new Date().getFullYear();
-  const from = `${year}-01-01`, to = `${year}-12-31`;
-  // łączymy orders + items
-  const [o,i] = await Promise.all([
-    supa.from('seedorders_orders').select('*').gte('data',from).lte('data',to),
-    supa.from('seedorders_items').select('*').then(res=>{
-      if(res.error){ return supa.from('seedorders_items 1').select('*'); }
-      return res;
-    })
+// przyciski raportów
+document.getElementById('r_sum').onclick     = () => runReport('sum');
+document.getElementById('r_missing').onclick = () => runReport('missing');
+
+// raport roczny + CSV
+document.getElementById('ryear_btn').onclick = async () => {
+  const year = Number(document.getElementById('ryear').value) || new Date().getFullYear();
+  const from = year + '-01-01', to = year + '-12-31';
+
+  const [o, i] = await Promise.all([
+    supa.from('seedorders_orders').select('*').gte('data', from).lte('data', to),
+    supa.from('seedorders_items').select('*')
   ]);
-  const orders=o.data||[], items=i.data||[];
+  const orders = o.data || [], items = i.data || [];
+
   const byClient = new Map();
-  orders.forEach(ord=>{
-    const its = items.filter(p=>p.order_id===ord.id);
-    its.forEach(p=>{
-      const key=ord.klient||'—';
-      const il = Number(p.ilość ?? p.ordered_qty || 0);
-      const dv = Number(p.delivered_qty || 0);
-      const arr = byClient.get(key)||[];
-      arr.push({ odmiana:p.odmiana, kategoria:p.kategoria, zam:il, wyd:dv });
-      byClient.set(key,arr);
+  orders.forEach(ord => {
+    const its = items.filter(p => p.order_id === ord.id);
+    its.forEach(p => {
+      const key = ord.klient || '—';
+      const il  = Number(p['ilość'] ?? p.ordered_qty || 0);
+      const dv  = Number(p.delivered_qty || 0);
+      const arr = byClient.get(key) || [];
+      arr.push({ odmiana: p.odmiana, kategoria: p.kategoria, zam: il, wyd: dv });
+      byClient.set(key, arr);
     });
   });
-  // HTML
-  let html='';
-  byClient.forEach((arr,client)=>{
-    const sumZ = arr.reduce((s,a)=>s+a.zam,0);
-    const sumW = arr.reduce((s,a)=>s+a.wyd,0);
-    html += `<div class="card" style="background:#0d142a;border:1px dashed #263042;margin:8px 0">
-      <b>${client}</b> <span class="small">— Zamówiono: ${fmt(sumZ)} • Wydano: ${fmt(sumW)}</span>
-      <ul>${arr.map(a=>`<li class="small">${a.kategoria} • ${a.odmiana}: zam. ${fmt(a.zam)}, wyd. ${fmt(a.wyd)}</li>`).join('')}</ul>
-    </div>`;
-  });
-  $('#ryear_out').innerHTML = html || '<div class="small muted">Brak danych w tym roku.</div>';
 
-  // CSV
-  $('#csv_btn').onclick=()=>{
-    const rows=[['Klient','Kategoria','Odmiana','Zamówiono','Wydano']];
-    byClient.forEach((arr,client)=>arr.forEach(a=>rows.push([client,a.kategoria,a.odmiana,a.zam,a.wyd])));
-    const csv = rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url=URL.createObjectURL(blob); const a=document.createElement('a');
-    a.href=url; a.download=`raport_${year}.csv`; a.click(); URL.revokeObjectURL(url);
+  let html = '';
+  byClient.forEach((arr, client) => {
+    const sumZ = arr.reduce((s, a) => s + a.zam, 0);
+    const sumW = arr.reduce((s, a) => s + a.wyd, 0);
+    html += '<div class="card" style="background:#0d142a;border:1px dashed #263042;margin:8px 0">'
+          + '<b>' + client + '</b> <span class="small">— Zamówiono: ' + fmt(sumZ) + ' • Wydano: ' + fmt(sumW) + '</span>'
+          + '<ul>' + arr.map(a => '<li class="small">' + a.kategoria + ' • ' + a.odmiana + ': zam. ' + fmt(a.zam) + ', wyd. ' + fmt(a.wyd) + '</li>').join('') + '</ul>'
+          + '</div>';
+  });
+  document.getElementById('ryear_out').innerHTML = html || '<div class="small muted">Brak danych w tym roku.</div>';
+
+  document.getElementById('csv_btn').onclick = () => {
+    const rows = [['Klient', 'Kategoria', 'Odmiana', 'Zamówiono', 'Wydano']];
+    byClient.forEach((arr, client) => arr.forEach(a => rows.push([client, a.kategoria, a.odmiana, a.zam, a.wyd])));
+    const csv  = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'raport_' + year + '.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 };
 
-/* ===== INIT ===== */
-async function reloadAll(){ await Promise.all([loadPrices(), loadClients(), loadOrders()]); }
+// ===== INIT =====
+async function reloadAll() { await Promise.all([loadPrices(), loadClients(), loadOrders()]); }
 setDefaultDates();
 
 // Auto start jeśli mamy zapisane klucze
-(async ()=>{
-  const url=localStorage.getItem(LS_URL), key=localStorage.getItem(LS_KEY);
-  if(url && key){ try{ supa = window.supabase.createClient(url,key); setStatus(true); await reloadAll(); }catch(e){ setStatus(false);} }
+(async () => {
+  const url = localStorage.getItem(LS_URL);
+  const key = localStorage.getItem(LS_KEY);
+  if (url && key) {
+    try {
+      supa = window.supabase.createClient(url, key);
+      setStatus(true);
+      await reloadAll();
+    } catch (e) {
+      setStatus(false);
+      console.error(e);
+    }
+  }
 })();
 </script>
 </body>
 </html>
+ 
