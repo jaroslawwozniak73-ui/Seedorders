@@ -1,28 +1,30 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>SeedOrders — wspólna baza (Supabase)</title>
-  <meta name="theme-color" content="#0b1020"/>
-  <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e5e7eb;margin:0}
-    .wrap{max-width:1100px;margin:14px auto;padding:0 10px}
-    .row{display:flex;gap:8px;align-items:center}
-    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:12px 0}
-    input,button,select,textarea{font:inherit;padding:9px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
-    button{cursor:pointer}
-    .grid{display:grid;gap:10px}.e2{grid-template-columns:1fr 1fr}.e3{grid-template-columns:1fr 1fr 1fr}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border:1px solid #374151;padding:7px} th{background:#0b1220;text-align:left}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#1f2937;border:1px solid #374151}
-    .muted{opacity:.75}.ok{color:#22c55e}.warn{color:#f59e0b}.bad{color:#ef4444}
-    .status-open{background:#0e1726;border-left:4px solid #60a5fa}   /* niekompletne – niebieski pasek */
-    .status-done{background:#0d1f14;border-left:4px solid #22c55e}   /* dostarczone – zielony pasek */
-    .right{text-align:right}
-    .link{color:#9dd1ff;text-decoration:underline;cursor:pointer}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SeedOrders — wspólna baza (Supabase)</title>
+<meta name="theme-color" content="#0b1020"/>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e5e7eb;margin:0}
+  .wrap{max-width:1100px;margin:14px auto;padding:0 10px}
+  .row{display:flex;gap:8px;align-items:center}
+  .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:12px 0}
+  input,button,select,textarea{font:inherit;padding:9px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
+  button{cursor:pointer}
+  .grid{display:grid;gap:10px}.e2{grid-template-columns:1fr 1fr}.e3{grid-template-columns:1fr 1fr 1fr}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{border:1px solid #374151;padding:7px} th{background:#0b1220;text-align:left}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#1f2937;border:1px solid #374151}
+  .muted{opacity:.75}.ok{color:#22c55e}.warn{color:#f59e0b}.bad{color:#ef4444}
+  /* Kolory kart wg stanu wydania */
+  .status-none {background:#0f1d14;border-left:4px solid #22c55e;}     /* nic nie wydano – zielonkawy */
+  .status-part {background:#2a1f0e;border-left:4px solid #f59e0b;}     /* częściowo – pomarańcz */
+  .status-full {background:#2a0e10;border-left:4px solid #ef4444;}     /* wszystko wydane – czerwony */
+  .right{text-align:right}
+  .link{color:#9dd1ff;text-decoration:underline;cursor:pointer}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -69,7 +71,7 @@
     <div id="p_list" class="muted" style="margin-top:8px"></div>
   </div>
 
-  <!-- KONTRAHENCI – jeden blok -->
+  <!-- KONTRAHENCI -->
   <div class="card">
     <h2>Kontrahenci (seedorders_clients)</h2>
     <div class="grid e3">
@@ -92,29 +94,35 @@
     <div id="c_list" class="small" style="margin-top:8px"></div>
   </div>
 
-  <!-- Dodaj zamówienie -->
+  <!-- DODAJ ZAMÓWIENIE -->
   <div class="card">
     <h2>Dodaj zamówienie (seedorders_orders + seedorders_items 1)</h2>
     <div class="grid e3">
-      <input id="o_client" list="dl_clients" placeholder="Kontrahent">
-      <datalist id="dl_clients"></datalist>
-      <input id="o_phone" placeholder="Telefon (auto)">
+      <div>
+        <input id="o_client" list="dl_clients" placeholder="Kontrahent">
+        <datalist id="dl_clients"></datalist>
+      </div>
+      <select id="o_client_sel"></select>
       <select id="o_cat"><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
     </div>
     <div class="grid e3" style="margin-top:8px">
+      <input id="o_phone" placeholder="Telefon (auto)">
       <input id="o_var" list="dl_var" placeholder="Odmiana">
       <datalist id="dl_var"></datalist>
-      <input id="o_qty" type="number" min="1" step="1" value="1" placeholder="Ilość">
-      <input id="o_price" type="number" step="0.01" placeholder="Cena / szt.">
     </div>
     <div class="grid e3" style="margin-top:8px">
+      <input id="o_qty" type="number" min="1" step="1" value="1" placeholder="Ilość">
+      <input id="o_price" type="number" step="0.01" placeholder="Cena / szt.">
       <input id="o_sup" placeholder="Dostawca (opcjonalnie)">
+    </div>
+    <div class="grid e3" style="margin-top:8px">
       <input id="o_note" placeholder="Uwagi (opcjonalnie)">
+      <div></div>
       <button id="o_add">Dodaj pozycję</button>
     </div>
   </div>
 
-  <!-- Zamówienia -->
+  <!-- ZAMÓWIENIA -->
   <div class="card">
     <h2>Zamówienia (ostatnie)</h2>
     <div class="row">
@@ -130,7 +138,7 @@
     <div id="o_list" style="margin-top:8px"></div>
   </div>
 
-  <!-- Raporty -->
+  <!-- RAPORTY -->
   <div class="card">
     <h2>📊 Raporty</h2>
     <div class="grid e3">
@@ -142,7 +150,8 @@
     </div>
     <div class="row" style="justify-content:flex-end;margin-top:8px">
       <button id="r_run">Pokaż sumy</button>
-      <button id="r_missing">Pokaż braki (pozostało)</button>
+      <button id="r_missing_table">Pokaż tylko braki (tabela)</button>
+      <button id="r_missing">Pokaż braki (kto czeka)</button>
     </div>
     <div id="r_out" style="margin-top:8px"></div>
 
@@ -161,15 +170,14 @@
 
 <script>
 (()=>{const $=s=>document.querySelector(s), money=x=>(Number(x)||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}), today=()=>new Date().toISOString().slice(0,10), firstMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10)};
-let supa=null, CACHE={prices:[],clients:[],orders:[],items:[]}, CURRENT_CLIENT_ID=null;
+let supa=null, CACHE={prices:[],clients:[],orders:[],items:[]}, CURRENT_CLIENT_ID=null, YEAR_ROWS=[];
 
+/* Połączenie */
 function saveCreds(){localStorage.setItem('sb_url',$('#url').value.trim());localStorage.setItem('sb_key',$('#key').value.trim());}
 function loadCreds(){ $('#url').value=localStorage.getItem('sb_url')||''; $('#key').value=localStorage.getItem('sb_key')||'';}
 loadCreds();
-
 $('#connect').onclick=async()=>{const u=$('#url').value.trim(),k=$('#key').value.trim(); if(!u||!k){alert('Wpisz URL i key');return;} supa=window.supabase.createClient(u,k); saveCreds(); $('#status').textContent='online'; $('#status').classList.add('ok'); await reloadAll();}
 if($('#url').value&&$('#key').value){supa=window.supabase.createClient($('#url').value,$('#key').value);$('#status').textContent='online';$('#status').classList.add('ok');reloadAll();}
-
 async function reloadAll(){await Promise.all([loadPrices(),loadClients(),loadOrders()]); $('#r_from').value=firstMonth(); $('#r_to').value=today(); $('#ry_year').value=new Date().getFullYear();}
 
 /* ===== CENNIK ===== */
@@ -198,7 +206,7 @@ $('#p_reload').onclick=loadPrices;
 $('#p_save').onclick=async()=>{
   const odm=$('#p_var').value.trim(); if(!odm) return alert('Podaj odmianę');
   const kat=$('#p_cat').value.trim(); const cena=Number($('#p_price').value||0); const dost=($('#p_sup').value||'').trim()||null;
-  const {error}=await supa.from('seedorders_prices').upsert({odmiana:odm,kategoria:kat,cena,dostawca:dost},{onConflict:'odmiana'});
+  const {error}=await supa.from('seedorders_prices').upsert({odmiana:odm,kategoria:kat,cena,cost:null,dostawca:dost},{onConflict:'odmiana'});
   if(error) return alert('Błąd: '+error.message); loadPrices();
 }
 $('#p_delete').onclick=async()=>{
@@ -209,8 +217,17 @@ $('#p_delete').onclick=async()=>{
   $('#p_var').value='';$('#p_price').value='';$('#p_sup').value=''; loadPrices();
 }
 
-/* ===== KONTRAHENCI – jeden blok ===== */
-function refreshClientsDatalist(){const dl=$('#dl_clients'); dl.innerHTML=''; (CACHE.clients||[]).forEach(c=>{const o=document.createElement('option');o.value=c.name;dl.appendChild(o);});}
+/* ===== KONTRAHENCI ===== */
+function refreshClientsDatalist(){
+  // datalist
+  const dl=$('#dl_clients'); dl.innerHTML='';
+  (CACHE.clients||[]).forEach(c=>{const o=document.createElement('option');o.value=c.name;dl.appendChild(o);});
+  // select (rozwijana lista)
+  const sel=$('#o_client_sel'); const v=sel.value;
+  sel.innerHTML='<option value="">(Wybierz z listy)</option>'+ (CACHE.clients||[]).slice().sort((a,b)=>a.name.localeCompare(b.name))
+     .map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  if(v) sel.value=v;
+}
 async function loadClients(){
   const {data,error}=await supa.from('seedorders_clients').select('*').order('name');
   if(error){$('#c_list').textContent='Błąd: '+error.message;return;}
@@ -243,7 +260,8 @@ $('#cl_save').onclick=async()=>{
 function refreshVarDatalist(){const cat=$('#o_cat').value.trim(); const dl=$('#dl_var'); dl.innerHTML=''; (CACHE.prices||[]).filter(r=>r.kategoria===cat).forEach(r=>{const o=document.createElement('option');o.value=r.odmiana;dl.appendChild(o);});}
 $('#o_cat').addEventListener('change',refreshVarDatalist);
 $('#o_var').addEventListener('change',()=>{const v=($('#o_var').value||'').trim(); const p=CACHE.prices.find(x=>x.odmiana===v); if(p){$('#o_cat').value=p.kategoria; $('#o_price').value=p.cena; $('#o_sup').value=p.dostawca||''; refreshVarDatalist();}});
-$('#o_client').addEventListener('change',()=>{const nm=($('#o_client').value||'').trim().toLowerCase(); const c=CACHE.clients.find(x=>x.name.toLowerCase()===nm); if(c&&c.phone) $('#o_phone').value=c.phone;});
+$('#o_client').addEventListener('change',()=>{const nm=($('#o_client').value||'').trim().toLowerCase(); const c=CACHE.clients.find(x=>x.name.toLowerCase()===nm); if(c&&c.phone) $('#o_phone').value=c.phone; $('#o_client_sel').value=c?c.name:'';});
+$('#o_client_sel').addEventListener('change',()=>{const nm=$('#o_client_sel').value; $('#o_client').value=nm; const c=CACHE.clients.find(x=>x.name===nm); if(c&&c.phone) $('#o_phone').value=c.phone;});
 $('#o_add').onclick=async()=>{
   try{
     const klient=($('#o_client').value||'').trim(); if(!klient) return alert('Podaj kontrahenta');
@@ -296,21 +314,24 @@ function itemsForOrder(id){
     return {id:r.id,odmiana:r['odmiana'],kategoria:r['kategoria'],ordered,delivered,remaining,cena:Number(r.cena||0),dostawca:r.dostawca||null};
   });
 }
-function remainingSum(o){return itemsForOrder(o.id).reduce((s,p)=>s+p.remaining,0);}
-/* NOWE: auto-dostarczone, gdy nic nie zostało */
+function deliveredState(o){ // none / part / full
+  const its=itemsForOrder(o.id); const sumOrd=its.reduce((s,p)=>s+p.ordered,0), sumDel=its.reduce((s,p)=>s+p.delivered,0);
+  if(sumDel===0) return 'none'; if(sumDel<sumOrd) return 'part'; return 'full';
+}
 async function autoUpdateStatusIfDone(order){
-  const rem = remainingSum(order);
-  if(rem===0 && (order.status||'zamówione')!=='dostarczone'){
+  const st=deliveredState(order);
+  if(st==='full' && (order.status||'zamówione')!=='dostarczone'){
     await supa.from('seedorders_orders').update({status:'dostarczone'}).eq('id',order.id);
     order.status='dostarczone';
   }
 }
-function rowColor(o){const rem=remainingSum(o); if((o.status||'zamówione')==='dostarczone'||rem===0) return 'status-done'; return 'status-open';}
+function cardClass(o){const st=deliveredState(o); return st==='full'?'status-full':(st==='part'?'status-part':'status-none');}
+function remainingSum(o){return itemsForOrder(o.id).reduce((s,p)=>s+p.remaining,0);}
 
 function renderOrders(){
   const q=($('#o_search').value||'').toLowerCase(), st=$('#o_status').value;
   let arr=CACHE.orders.slice();
-  // niezakończone na górze, potem po dacie malejąco
+  // niedostarczone u góry, po dacie malejąco; dostarczone same trafią na dół (bo remaining=0)
   arr.sort((a,b)=>{const ra=remainingSum(a), rb=remainingSum(b); const ga=(ra>0?0:1), gb=(rb>0?0:1); if(ga!==gb) return ga-gb; return String(b.created_at).localeCompare(String(a.created_at));});
   if(st!=='wszystkie') arr=arr.filter(o=>(o.status||'zamówione')===st);
   if(q) arr=arr.filter(o=>{const txt=[o.klient,o.telefon,o.uwagi].filter(Boolean).join(' ').toLowerCase(); const iv=itemsForOrder(o.id).map(p=>p.odmiana).join(' ').toLowerCase(); return (txt+' '+iv).includes(q);});
@@ -320,7 +341,7 @@ function renderOrders(){
 
   arr.forEach(o=>{
     const its=itemsForOrder(o.id);
-    const card=document.createElement('div'); card.className='card '+rowColor(o);
+    const card=document.createElement('div'); card.className='card '+cardClass(o);
     card.innerHTML=`
       <div class="row" style="justify-content:space-between">
         <div>
@@ -337,10 +358,9 @@ function renderOrders(){
       </tbody></table>`:'<div class="muted">Brak pozycji.</div>'}
     `;
     card.querySelector('.st').value=(o.status||'zamówione');
-    card.querySelector('.st').addEventListener('change', async ev=>{await supa.from('seedorders_orders').update({status:ev.target.value}).eq('id',o.id); card.className='card '+rowColor(o);});
+    card.querySelector('.st').addEventListener('change', async ev=>{await supa.from('seedorders_orders').update({status:ev.target.value}).eq('id',o.id); card.className='card '+cardClass(o);});
     card.querySelector('.del').addEventListener('click', async()=>{if(!confirm('Usunąć zamówienie?'))return; await supa.from('seedorders_orders').delete().eq('id',o.id); await loadOrders();});
 
-    // delegacja: ship / edit
     card.addEventListener('click', async ev=>{
       const tr=ev.target.closest('tr'); if(!tr) return; const pid=tr.dataset.id;
       if(ev.target.closest('button.ship')){
@@ -359,7 +379,7 @@ function renderOrders(){
         const idx=CACHE.items.findIndex(x=>x.id===pid); if(idx>=0) CACHE.items[idx]=r;
 
         await autoUpdateStatusIfDone(o);
-        card.className='card '+rowColor(o);
+        card.className='card '+cardClass(o);
         const badge=card.querySelector('.badge:nth-of-type(2)'); if(badge) badge.textContent='Pozostało: '+remainingSum(o);
       }
       if(ev.target.closest('button.edit')){
@@ -377,7 +397,7 @@ function renderOrders(){
         const idx=CACHE.items.findIndex(x=>x.id===pid); if(idx>=0) CACHE.items[idx]=rr;
 
         await autoUpdateStatusIfDone(o);
-        card.className='card '+rowColor(o);
+        card.className='card '+cardClass(o);
         const badge=card.querySelector('.badge:nth-of-type(2)'); if(badge) badge.textContent='Pozostało: '+remainingSum(o);
       }
     });
@@ -389,10 +409,11 @@ $('#o_reload').onclick=loadOrders; $('#o_search').oninput=renderOrders; $('#o_st
 
 /* ===== RAPORTY ===== */
 $('#r_from').value=firstMonth(); $('#r_to').value=today();
-$('#r_run').onclick=()=>runSummary(false);
-$('#r_missing').onclick=()=>runSummary(true);
+$('#r_run').onclick=()=>runSummary('all');
+$('#r_missing').onclick=()=>runSummary('who');
+$('#r_missing_table').onclick=()=>runSummary('missing');
 
-async function runSummary(showMissing){
+async function runSummary(mode){
   const from=$('#r_from').value||firstMonth(), to=$('#r_to').value||today(), cat=$('#r_cat').value||'';
   const {data:orders,error:oErr}=await supa.from('seedorders_orders').select('id,created_at,klient').gte('created_at',from+'T00:00:00').lte('created_at',to+'T23:59:59');
   if(oErr){$('#r_out').textContent='Błąd: '+oErr.message;return;}
@@ -410,14 +431,15 @@ async function runSummary(showMissing){
     const prev=map.get(key)||{kategoria:r.kategoria,odmiana:r['odmiana'],ordered:0,delivered:0,remaining:0};
     prev.ordered+=ord; prev.delivered+=del; prev.remaining+=rem; map.set(key,prev);
   });
-  const rows=[...map.values()].sort((a,b)=> (a.kategoria||'').localeCompare(b.kategoria||'') || (a.odmiana||'').localeCompare(b.odmiana||''));
+  let rows=[...map.values()].sort((a,b)=> (a.kategoria||'').localeCompare(b.kategoria||'') || (a.odmiana||'').localeCompare(b.odmiana||''));
+  if(mode==='missing') rows=rows.filter(r=>r.remaining>0);
   const tot=rows.reduce((t,r)=>({ordered:t.ordered+r.ordered,delivered:t.delivered+r.delivered,remaining:t.remaining+r.remaining}),{ordered:0,delivered:0,remaining:0});
   let html=`<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th></tr></thead><tbody>${
     rows.map(r=>`<tr><td>${r.kategoria||''}</td><td>${r.odmiana||''}</td><td class="right">${r.ordered}</td><td class="right">${r.delivered}</td><td class="right">${r.remaining}</td></tr>`).join('')
   }</tbody><tfoot><tr><th colspan="2" class="right">RAZEM</th><th class="right">${tot.ordered}</th><th class="right">${tot.delivered}</th><th class="right">${tot.remaining}</th></tr></tfoot></table>
   <div class="muted" style="margin-top:6px">Zakres: ${from} – ${to} ${cat?('• '+cat):''}</div>`;
 
-  if(showMissing){
+  if(mode==='who'){
     const byVar=new Map(); const omap=new Map(orders.map(o=>[o.id,o]));
     items.forEach(r=>{
       const ord=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0);
@@ -438,12 +460,12 @@ async function runSummary(showMissing){
 
 /* ===== RAPORT ROCZNY + CSV ===== */
 $('#ry_run').onclick=runYear; $('#ry_csv').onclick=downloadYearCsv;
-let YEAR_ROWS=[];
 async function runYear(){
+  YEAR_ROWS=[];
   const Y=parseInt($('#ry_year').value||new Date().getFullYear(),10); const from=`${Y}-01-01`, to=`${Y}-12-31`;
   const {data:orders,error:oErr}=await supa.from('seedorders_orders').select('id,klient,telefon,created_at').gte('created_at',from+'T00:00:00').lte('created_at',to+'T23:59:59');
   if(oErr){$('#ry_out').textContent='Błąd: '+oErr.message;return;}
-  if(!orders?.length){$('#ry_out').innerHTML='<div class="muted">Brak danych.</div>'; YEAR_ROWS=[]; return;}
+  if(!orders?.length){$('#ry_out').innerHTML='<div class="muted">Brak danych.</div>'; return;}
   const ids=orders.map(o=>o.id); const omap=new Map(orders.map(o=>[o.id,o]));
   const {data:items,error:iErr}=await supa.from('seedorders_items 1').select('*').in('order_id',ids);
   if(iErr){$('#ry_out').textContent='Błąd: '+iErr.message;return;}
@@ -456,7 +478,7 @@ async function runYear(){
     const P=entry.pozycje.get(pkey)||{variety:pkey,ordered:0,delivered:0}; P.ordered+=ord; P.delivered+=del; entry.pozycje.set(pkey,P); entry.sumOrd+=ord; entry.sumDel+=del; perClient.set(key,entry);
   });
   const rows=[...perClient.values()].sort((a,b)=>a.klient.localeCompare(b.klient));
-  YEAR_ROWS=[]; $('#ry_out').innerHTML = rows.map(c=>{
+  $('#ry_out').innerHTML = rows.map(c=>{
     const lines=[...c.pozycje.values()].sort((a,b)=>a.variety.localeCompare(b.variety));
     YEAR_ROWS.push({Klient:c.klient,Telefon:c.telefon,Pozycje:lines.map(x=>`${x.variety}: zam.${x.ordered}, wyd.${x.delivered}`).join(' | '), Zamówiono:c.sumOrd, Wydano:c.sumDel});
     return `<div class="card"><div><b>${c.klient}</b> ${c.telefon?('• '+c.telefon):''}</div>
@@ -475,3 +497,4 @@ function downloadYearCsv(){
 </script>
 </body>
 </html>
+
