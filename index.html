@@ -1,480 +1,593 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>SeedOrders — wspólna baza (Supabase)</title>
-  <meta name="theme-color" content="#0b1020"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SeedOrders — wspólna baza</title>
+  <meta name="theme-color" content="#001020">
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e5e7eb;margin:0}
-    .wrap{max-width:1100px;margin:14px auto;padding:0 10px}
+    :root{--bg:#001020;--card:#111827;--edge:#374151;--accent:#1f2937;--txt:#e5e7eb;--muted:#9ca3af;--ok:#065f46;--warn:#92400e;--bad:#7f1d1d}
+    html,body{background:var(--bg);color:var(--txt);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 12px}
+    h2{margin:10px 0}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:12px;padding:12px;margin:12px 0}
     .row{display:flex;gap:8px;align-items:center}
-    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:12px 0}
-    input,button,select,textarea{font:inherit;padding:9px;border-radius:10px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
-    button{cursor:pointer}
-    .grid{display:grid;gap:10px}.e2{grid-template-columns:1fr 1fr}.e3{grid-template-columns:1fr 1fr 1fr}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border:1px solid #374151;padding:7px} th{background:#0b1220;text-align:left}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#1f2937;border:1px solid #374151}
-    .muted{opacity:.75}.ok{color:#22c55e}.warn{color:#f59e0b}.bad{color:#ef4444}
-    .status-open{background:#0e1726;border-left:4px solid #60a5fa}   /* niekompletne – niebieski pasek */
-    .status-done{background:#0d1f14;border-left:4px solid #22c55e}   /* dostarczone – zielony pasek */
+    .row>*,input,select,button,textarea{border:1px solid var(--edge);background:#0b1228;color:var(--txt);padding:9px;border-radius:10px}
+    input,select,button,textarea{outline:none}
+    button{cursor:pointer;background:#2563eb;border-color:#2563eb}
+    button.secondary{background:#0b1228}
+    .grid{display:grid;gap:10px}
+    .g2{grid-template-columns:1fr 1fr}
+    .g3{grid-template-columns:1fr 1fr 1fr}
+    .muted{color:var(--muted)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#0b1228;border:1px solid var(--edge);font-size:12px;color:#9ca3af}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid var(--edge);padding:8px;text-align:left}
     .right{text-align:right}
-    .link{color:#9dd1ff;text-decoration:underline;cursor:pointer}
+    .sticky-top{position:sticky;top:0;background:var(--bg);z-index:5;padding:8px 0;margin:-8px 0 8px}
+    .collapse-head{display:flex;gap:10px;align-items:center;cursor:pointer}
+    .collapse-body{margin-top:10px}
+    .pill{padding:3px 9px;border-radius:999px;border:1px solid var(--edge);background:#0b1228}
+    /* Kolory zamówień */
+    .ord--done{box-shadow:inset 0 0 0 2px var(--bad);background:linear-gradient(0deg, rgba(127,29,29,.12), transparent)}
+    .ord--partial{box-shadow:inset 0 0 0 2px var(--warn);background:linear-gradient(0deg, rgba(146,64,14,.12), transparent)}
+    .ord--new{box-shadow:inset 0 0 0 2px #0b5; background:linear-gradient(0deg, rgba(0,187,85,.12), transparent)}
+    .ord-head{display:flex;gap:8px;align-items:center;justify-content:space-between}
+    .ord-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .ord-actions{display:flex;gap:6px;align-items:center}
+    .mt8{margin-top:8px}
+    .hide{display:none}
+    .ok{color:#22c55e}
+    .err{color:#ef4444}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
 </head>
 <body>
-<div class="wrap">
+  <div class="wrap">
+    <div class="row sticky-top">
+      <div><b>🌱 SeedOrders — wspólna baza</b></div>
+      <div class="badge">Status: <span id="status">offline</span></div>
+    </div>
 
-  <div class="row" style="justify-content:space-between">
-    <div><b>🌱 SeedOrders — wspólna baza</b></div>
-    <div>Status: <span id="status" class="badge">offline</span></div>
-  </div>
-
-  <!-- Połączenie -->
-  <div class="card">
-    <h2>Połączenie z Supabase</h2>
-    <div class="row e3">
-      <input id="url" placeholder="Supabase URL (https://xxxx.supabase.co)">
-      <input id="key" placeholder="Anon public key (eyJ...)">
-      <button id="connect">Połącz i zapamiętaj</button>
-    </div>
-    <div class="muted" style="margin-top:6px">Dane logowania zapisują się w tej przeglądarce.</div>
-  </div>
-
-  <!-- Cennik -->
-  <div class="card">
-    <h2>Cennik (seedorders_prices)</h2>
-    <div class="row" style="gap:18px;margin-bottom:6px">
-      <label><input type="checkbox" id="pf_r" checked> Rzepak</label>
-      <label><input type="checkbox" id="pf_k" checked> Kukurydza</label>
-      <label><input type="checkbox" id="pf_z" checked> Zboża</label>
-      <label><input type="checkbox" id="pf_i" checked> Inne</label>
-      <span class="muted">← odhacz, aby filtrować listę odmian</span>
-    </div>
-    <div class="grid e3">
-      <input id="p_var" placeholder="Odmiana">
-      <select id="p_cat"><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
-      <input id="p_price" type="number" step="0.01" placeholder="Cena">
-    </div>
-    <div class="grid e3" style="margin-top:8px">
-      <input id="p_sup" placeholder="Dostawca (opcjonalnie)">
-      <div class="row">
-        <button id="p_save">Zapisz / zaktualizuj</button>
-        <button id="p_delete" style="margin-left:8px;border-color:#ef4444;color:#fecaca;background:#1b0f10">Usuń</button>
-      </div>
-      <div class="right"><button id="p_reload">Odśwież</button></div>
-    </div>
-    <div id="p_list" class="muted" style="margin-top:8px"></div>
-  </div>
-
-  <!-- KONTRAHENCI – jeden blok -->
-  <div class="card">
-    <h2>Kontrahenci (seedorders_clients)</h2>
-    <div class="grid e3">
-      <input id="cl_name" placeholder="Nazwa (np. Jan Kowalski)">
-      <input id="cl_phone" placeholder="Telefon">
-      <input id="cl_street" placeholder="Ulica (np. Topolowa 1)">
-      <input id="cl_postal" placeholder="Kod (np. 09-412)">
-      <input id="cl_city" placeholder="Miejscowość">
-      <input id="cl_country" value="Polska">
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="cl_new">Nowy</button>
-      <button id="cl_save" style="margin-left:8px">Zapisz</button>
-      <span id="cl_info" class="muted"></span>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <input id="c_search" placeholder="Szukaj klienta..." style="flex:1">
-      <button id="c_reload">Odśwież listę</button>
-    </div>
-    <div id="c_list" class="small" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Dodaj zamówienie -->
-  <div class="card">
-    <h2>Dodaj zamówienie (seedorders_orders + seedorders_items 1)</h2>
-    <div class="grid e3">
-      <input id="o_client" list="dl_clients" placeholder="Kontrahent">
-      <datalist id="dl_clients"></datalist>
-      <input id="o_phone" placeholder="Telefon (auto)">
-      <select id="o_cat"><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
-    </div>
-    <div class="grid e3" style="margin-top:8px">
-      <input id="o_var" list="dl_var" placeholder="Odmiana">
-      <datalist id="dl_var"></datalist>
-      <input id="o_qty" type="number" min="1" step="1" value="1" placeholder="Ilość">
-      <input id="o_price" type="number" step="0.01" placeholder="Cena / szt.">
-    </div>
-    <div class="grid e3" style="margin-top:8px">
-      <input id="o_sup" placeholder="Dostawca (opcjonalnie)">
-      <input id="o_note" placeholder="Uwagi (opcjonalnie)">
-      <button id="o_add">Dodaj pozycję</button>
-    </div>
-  </div>
-
-  <!-- Zamówienia -->
-  <div class="card">
-    <h2>Zamówienia (ostatnie)</h2>
-    <div class="row">
-      <input id="o_search" placeholder="Szukaj: klient/odmiana/uwagi..." style="flex:1">
-      <select id="o_status">
-        <option value="wszystkie">Wszystkie statusy</option>
-        <option value="zamówione">Zamówione</option>
-        <option value="dostarczone">Dostarczone</option>
-        <option value="anulowane">Anulowane</option>
-      </select>
-      <button id="o_reload">Odśwież</button>
-    </div>
-    <div id="o_list" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Raporty -->
-  <div class="card">
-    <h2>📊 Raporty</h2>
-    <div class="grid e3">
-      <div><label>Od</label><br><input type="date" id="r_from"></div>
-      <div><label>Do</label><br><input type="date" id="r_to"></div>
-      <div><label>Kategoria</label><br>
-        <select id="r_cat"><option value="">(Wszystkie)</option><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
+    <!-- Połączenie (podgląd; łączenie stałe w kodzie) -->
+    <div class="card">
+      <h2>Połączenie z Supabase</h2>
+      <div class="row"><span class="muted">Połączenie jest wpisane w kodzie. Pola poniżej to tylko podgląd.</span></div>
+      <div class="grid g3">
+        <input id="url" placeholder="Supabase URL" readonly>
+        <input id="key" placeholder="Anon public key" readonly>
+        <button id="connect" disabled>Połączono (stałe)</button>
       </div>
     </div>
-    <div class="row" style="justify-content:flex-end;margin-top:8px">
-      <button id="r_run">Pokaż sumy</button>
-      <button id="r_missing">Pokaż braki (pozostało)</button>
-    </div>
-    <div id="r_out" style="margin-top:8px"></div>
 
-    <div class="row" style="margin-top:16px;align-items:flex-end">
-      <div>
-        <label>Rok</label><br>
-        <input id="ry_year" type="number" min="2000" max="2100" step="1" style="width:120px">
+    <!-- Cennik -->
+    <div class="card">
+      <div class="collapse-head" data-collapse="#price-body">
+        <h2 style="margin:0">Cennik (seedorders_prices)</h2>
+        <span class="muted">— kliknij, aby pokazać/ukryć</span>
       </div>
-      <div><button id="ry_run">Raport roczny: kto/co/ile</button></div>
-      <div><button id="ry_csv">Pobierz CSV</button></div>
-    </div>
-    <div id="ry_out" style="margin-top:8px"></div>
-  </div>
-
-</div>
-
-<script>
-(()=>{const $=s=>document.querySelector(s), money=x=>(Number(x)||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}), today=()=>new Date().toISOString().slice(0,10), firstMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10)};
-let supa=null, CACHE={prices:[],clients:[],orders:[],items:[]}, CURRENT_CLIENT_ID=null;
-
-function saveCreds(){localStorage.setItem('sb_url',$('#url').value.trim());localStorage.setItem('sb_key',$('#key').value.trim());}
-function loadCreds(){ $('#url').value=localStorage.getItem('sb_url')||''; $('#key').value=localStorage.getItem('sb_key')||'';}
-loadCreds();
-
-$('#connect').onclick=async()=>{const u=$('#url').value.trim(),k=$('#key').value.trim(); if(!u||!k){alert('Wpisz URL i key');return;} supa=window.supabase.createClient(u,k); saveCreds(); $('#status').textContent='online'; $('#status').classList.add('ok'); await reloadAll();}
-if($('#url').value&&$('#key').value){supa=window.supabase.createClient($('#url').value,$('#key').value);$('#status').textContent='online';$('#status').classList.add('ok');reloadAll();}
-
-async function reloadAll(){await Promise.all([loadPrices(),loadClients(),loadOrders()]); $('#r_from').value=firstMonth(); $('#r_to').value=today(); $('#ry_year').value=new Date().getFullYear();}
-
-/* ===== CENNIK ===== */
-function catAllowed(cat){return (cat==='Rzepak'&&$('#pf_r').checked)||(cat==='Kukurydza'&&$('#pf_k').checked)||(cat==='Zboża'&&$('#pf_z').checked)||(cat==='Inne'&&$('#pf_i').checked);}
-['#pf_r','#pf_k','#pf_z','#pf_i'].forEach(id=>$(id).addEventListener('change',renderPriceList));
-
-async function loadPrices(){
-  const {data,error}=await supa.from('seedorders_prices').select('*').order('odmiana');
-  if(error){$('#p_list').textContent='Błąd: '+error.message;return;}
-  CACHE.prices=data||[]; renderPriceList(); refreshVarDatalist(); refreshClientsDatalist();
-}
-function renderPriceList(){
-  const rows=(CACHE.prices||[]).filter(r=>catAllowed(r.kategoria)).map(r=>({odmiana:r.odmiana,kategoria:r.kategoria,cena:Number(r.cena||0),dostawca:r.dostawca||''}));
-  $('#p_list').innerHTML=rows.length?`<table><thead><tr><th>Odmiana</th><th>Kategoria</th><th class="right">Cena</th><th>Dostawca</th></tr></thead><tbody>${
-   rows.map(r=>`<tr data-var="${r.odmiana}" data-cat="${r.kategoria}"><td>${r.odmiana}</td><td>${r.kategoria}</td><td class="right">${money(r.cena)}</td><td>${r.dostawca||''}</td></tr>`).join('')}</tbody></table>`:`<div class="muted">Brak pozycji w filtrze.</div>`;
-  document.querySelectorAll('#p_list tbody tr').forEach(tr=>{
-    tr.onclick=()=>{
-      $('#p_var').value=tr.dataset.var||'';
-      $('#p_cat').value=tr.dataset.cat||'Rzepak';
-      const c=tr.children[2].textContent; $('#p_price').value=c.replace(/[^\d,.-]/g,'').replace(',','.');
-      $('#p_sup').value=tr.children[3].textContent||'';
-    };
-  });
-}
-$('#p_reload').onclick=loadPrices;
-$('#p_save').onclick=async()=>{
-  const odm=$('#p_var').value.trim(); if(!odm) return alert('Podaj odmianę');
-  const kat=$('#p_cat').value.trim(); const cena=Number($('#p_price').value||0); const dost=($('#p_sup').value||'').trim()||null;
-  const {error}=await supa.from('seedorders_prices').upsert({odmiana:odm,kategoria:kat,cena,dostawca:dost},{onConflict:'odmiana'});
-  if(error) return alert('Błąd: '+error.message); loadPrices();
-}
-$('#p_delete').onclick=async()=>{
-  const odm=$('#p_var').value.trim(); if(!odm) return alert('Wpisz lub kliknij odmianę');
-  if(!confirm('Usunąć z cennika?'))return;
-  const {error}=await supa.from('seedorders_prices').delete().eq('odmiana',odm);
-  if(error) return alert('Błąd: '+error.message);
-  $('#p_var').value='';$('#p_price').value='';$('#p_sup').value=''; loadPrices();
-}
-
-/* ===== KONTRAHENCI – jeden blok ===== */
-function refreshClientsDatalist(){const dl=$('#dl_clients'); dl.innerHTML=''; (CACHE.clients||[]).forEach(c=>{const o=document.createElement('option');o.value=c.name;dl.appendChild(o);});}
-async function loadClients(){
-  const {data,error}=await supa.from('seedorders_clients').select('*').order('name');
-  if(error){$('#c_list').textContent='Błąd: '+error.message;return;}
-  CACHE.clients=data||[]; CURRENT_CLIENT_ID=null; renderClients(); refreshClientsDatalist();
-}
-function renderClients(){
-  const q=($('#c_search').value||'').toLowerCase();
-  const rows=CACHE.clients.filter(c=>[c.name,c.phone,c.street,c.postal_code,c.city,c.country].filter(Boolean).join(' ').toLowerCase().includes(q));
-  $('#c_list').innerHTML=rows.length?`<table><thead><tr><th>Nazwa</th><th>Telefon</th><th>Adres</th></tr></thead><tbody>${
-   rows.map(c=>`<tr data-id="${c.id||''}"><td class="link">${c.name}</td><td>${c.phone||''}</td><td>${[c.street,c.postal_code,c.city,c.country].filter(Boolean).join(', ')}</td></tr>`).join('')}</tbody></table>`:`<div class="muted">Brak kontrahentów.</div>`;
-  document.querySelectorAll('#c_list tbody tr').forEach(tr=>{
-    tr.onclick=()=>{
-      const c=CACHE.clients.find(x=>x.id===tr.dataset.id); if(!c) return;
-      CURRENT_CLIENT_ID=c.id||null; $('#cl_name').value=c.name||''; $('#cl_phone').value=c.phone||'';
-      $('#cl_street').value=c.street||''; $('#cl_postal').value=c.postal_code||''; $('#cl_city').value=c.city||''; $('#cl_country').value=c.country||'Polska';
-      $('#cl_info').textContent='Załadowano do edycji.';
-    };
-  });
-}
-$('#c_search').oninput=renderClients; $('#c_reload').onclick=loadClients;
-$('#cl_new').onclick=()=>{CURRENT_CLIENT_ID=null; ['cl_name','cl_phone','cl_street','cl_postal','cl_city','cl_country'].forEach(id=>$( '#'+id).value=id==='cl_country'?'Polska':''); $('#cl_info').textContent='Nowy rekord.';}
-$('#cl_save').onclick=async()=>{
-  const payload={name:$('#cl_name').value.trim(),phone:($('#cl_phone').value||'').trim()||null,street:($('#cl_street').value||'').trim()||null,postal_code:($('#cl_postal').value||'').trim()||null,city:($('#cl_city').value||'').trim()||null,country:($('#cl_country').value||'').trim()||null};
-  if(!payload.name){$('#cl_info').textContent='Podaj nazwę';return;}
-  let q; if(CURRENT_CLIENT_ID) q=supa.from('seedorders_clients').update(payload).eq('id',CURRENT_CLIENT_ID); else q=supa.from('seedorders_clients').insert(payload);
-  const {error}=await q; $('#cl_info').textContent= error?('Błąd: '+error.message):'Zapisano ✅'; if(!error) loadClients();
-}
-
-/* ===== DODAJ ZAMÓWIENIE ===== */
-function refreshVarDatalist(){const cat=$('#o_cat').value.trim(); const dl=$('#dl_var'); dl.innerHTML=''; (CACHE.prices||[]).filter(r=>r.kategoria===cat).forEach(r=>{const o=document.createElement('option');o.value=r.odmiana;dl.appendChild(o);});}
-$('#o_cat').addEventListener('change',refreshVarDatalist);
-$('#o_var').addEventListener('change',()=>{const v=($('#o_var').value||'').trim(); const p=CACHE.prices.find(x=>x.odmiana===v); if(p){$('#o_cat').value=p.kategoria; $('#o_price').value=p.cena; $('#o_sup').value=p.dostawca||''; refreshVarDatalist();}});
-$('#o_client').addEventListener('change',()=>{const nm=($('#o_client').value||'').trim().toLowerCase(); const c=CACHE.clients.find(x=>x.name.toLowerCase()===nm); if(c&&c.phone) $('#o_phone').value=c.phone;});
-$('#o_add').onclick=async()=>{
-  try{
-    const klient=($('#o_client').value||'').trim(); if(!klient) return alert('Podaj kontrahenta');
-    const telefon=($('#o_phone').value||'').trim()||null;
-    const kategoria=$('#o_cat').value.trim();
-    const odm=($('#o_var').value||'').trim(); if(!odm) return alert('Podaj odmianę');
-    const qty=parseInt($('#o_qty').value||'0',10); if(!qty) return alert('Podaj ilość');
-    const cena=Number($('#o_price').value||0);
-    const dost=($('#o_sup').value||'').trim()||null;
-    const uwagi=($('#o_note').value||'').trim()||null;
-
-    let cl=CACHE.clients.find(c=>c.name.toLowerCase()===klient.toLowerCase());
-    if(!cl){
-      const ins=await supa.from('seedorders_clients').insert({name:klient,phone:telefon}).select('*').single();
-      if(ins.error) return alert('Błąd klient: '+ins.error.message);
-      cl=ins.data; CACHE.clients.push(cl); refreshClientsDatalist();
-    }
-
-    let ord=CACHE.orders.find(o=>(o.klient||'').toLowerCase()===klient.toLowerCase() && (o.status||'zamówione')!=='anulowane' && String(o.created_at||'').slice(0,10)===today());
-    if(!ord){
-      const ins=await supa.from('seedorders_orders').insert({klient,telefon,uwagi:uwagi||'',status:'zamówione',client_id:cl.id||null}).select('*').single();
-      if(ins.error) return alert('Błąd tworzenia zamówienia: '+ins.error.message);
-      ord=ins.data; CACHE.orders.unshift(ord);
-    }else{
-      const patch={}; if(telefon) patch.telefon=telefon; if(uwagi) patch.uwagi=(ord.uwagi||'')+'\n'+uwagi; if(cl.id) patch.client_id=cl.id;
-      if(Object.keys(patch).length){const up=await supa.from('seedorders_orders').update(patch).eq('id',ord.id); if(up.error) return alert('Błąd zam.: '+up.error.message);}
-    }
-
-    const ins2=await supa.from('seedorders_items 1').insert({order_id:ord.id,kategoria:kategoria,odmiana:odm,"ilość":qty,cena:cena,dostawca:dost});
-    if(ins2.error) return alert('Błąd pozycji: '+ins2.error.message);
-
-    $('#o_var').value=''; $('#o_qty').value='1'; $('#o_price').value=''; $('#o_note').value='';
-    await loadOrders();
-  }catch(e){alert('Błąd (sieć?): '+(e.message||e));}
-}
-
-/* ===== ZAMÓWIENIA ===== */
-async function loadOrders(){
-  const [o,i]=await Promise.all([
-    supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(300),
-    supa.from('seedorders_items 1').select('*')
-  ]);
-  CACHE.orders=o.data||[]; CACHE.items=i.data||[]; renderOrders();
-}
-function itemsForOrder(id){
-  return CACHE.items.filter(p=>p.order_id===id).map(r=>{
-    const ordered=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0);
-    const delivered=Number(r.delivered_qty||0);
-    const remaining=(r.remaining_qty!=null)?Number(r.remaining_qty):Math.max(ordered-delivered,0);
-    return {id:r.id,odmiana:r['odmiana'],kategoria:r['kategoria'],ordered,delivered,remaining,cena:Number(r.cena||0),dostawca:r.dostawca||null};
-  });
-}
-function remainingSum(o){return itemsForOrder(o.id).reduce((s,p)=>s+p.remaining,0);}
-/* NOWE: auto-dostarczone, gdy nic nie zostało */
-async function autoUpdateStatusIfDone(order){
-  const rem = remainingSum(order);
-  if(rem===0 && (order.status||'zamówione')!=='dostarczone'){
-    await supa.from('seedorders_orders').update({status:'dostarczone'}).eq('id',order.id);
-    order.status='dostarczone';
-  }
-}
-function rowColor(o){const rem=remainingSum(o); if((o.status||'zamówione')==='dostarczone'||rem===0) return 'status-done'; return 'status-open';}
-
-function renderOrders(){
-  const q=($('#o_search').value||'').toLowerCase(), st=$('#o_status').value;
-  let arr=CACHE.orders.slice();
-  // niezakończone na górze, potem po dacie malejąco
-  arr.sort((a,b)=>{const ra=remainingSum(a), rb=remainingSum(b); const ga=(ra>0?0:1), gb=(rb>0?0:1); if(ga!==gb) return ga-gb; return String(b.created_at).localeCompare(String(a.created_at));});
-  if(st!=='wszystkie') arr=arr.filter(o=>(o.status||'zamówione')===st);
-  if(q) arr=arr.filter(o=>{const txt=[o.klient,o.telefon,o.uwagi].filter(Boolean).join(' ').toLowerCase(); const iv=itemsForOrder(o.id).map(p=>p.odmiana).join(' ').toLowerCase(); return (txt+' '+iv).includes(q);});
-
-  const box=$('#o_list'); box.innerHTML='';
-  if(!arr.length){box.innerHTML='<div class="muted">Brak zamówień.</div>';return;}
-
-  arr.forEach(o=>{
-    const its=itemsForOrder(o.id);
-    const card=document.createElement('div'); card.className='card '+rowColor(o);
-    card.innerHTML=`
-      <div class="row" style="justify-content:space-between">
-        <div>
-          <span class="badge">${o.status||'zamówione'}</span>
-          <b>${String(o.created_at||'').slice(0,10)}</b> •
-          <b>${o.klient||''}</b> ${o.telefon?('• '+o.telefon):''}
-          <span class="badge" style="margin-left:6px">Pozostało: ${remainingSum(o)}</span>
-          ${o.uwagi?('<div class="muted">Uwagi: '+o.uwagi+'</div>'):''}
+      <div class="collapse-body" id="price-body">
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="pf_r" checked> Rzepak</label>
+          <label class="pill"><input type="checkbox" id="pf_k" checked> Kukurydza</label>
+          <label class="pill"><input type="checkbox" id="pf_z" checked> Zboża</label>
+          <label class="pill"><input type="checkbox" id="pf_i" checked> Inne</label>
+          <span class="muted">— odhacz, aby filtrować listę odmian</span>
+          <button id="p_refresh" class="secondary right" style="margin-left:auto">Odśwież</button>
         </div>
-        <div class="row"><select class="st"><option>zamówione</option><option>dostarczone</option><option>anulowane</option></select><button class="del" style="margin-left:8px">Usuń</button></div>
+        <div class="grid g3 mt8">
+          <input id="p_var" list="dl_var" placeholder="Odmiana">
+          <select id="p_cat">
+            <option value="Rzepak">Rzepak</option>
+            <option value="Kukurydza">Kukurydza</option>
+            <option value="Zboża">Zboża</option>
+            <option value="Inne">Inne</option>
+          </select>
+          <input id="p_price" type="number" step="0.01" placeholder="Cena">
+        </div>
+        <div class="grid g3 mt8">
+          <input id="p_sup" placeholder="Dostawca (opcjonalnie)">
+          <button id="p_save">Zapisz / zaktualizuj</button>
+          <button id="p_del" class="secondary">Usuń</button>
+        </div>
+        <div id="p_list" class="mt8"></div>
+        <datalist id="dl_var"></datalist>
       </div>
-      ${its.length?`<table><thead><tr><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th><th class="right">Wydaj</th><th class="right">Edytuj</th></tr></thead><tbody>${
-        its.map(p=>`<tr data-id="${p.id}"><td>${p.kategoria||''} • ${p.odmiana||''}</td><td class="right ord">${p.ordered}</td><td class="right delv">${p.delivered}</td><td class="right rem">${p.remaining}</td><td class="right"><input type="number" step="0.001" value="1" style="width:90px"><button class="ship">OK</button></td><td class="right"><button class="edit">Edytuj</button></td></tr>`).join('')}
-      </tbody></table>`:'<div class="muted">Brak pozycji.</div>'}
-    `;
-    card.querySelector('.st').value=(o.status||'zamówione');
-    card.querySelector('.st').addEventListener('change', async ev=>{await supa.from('seedorders_orders').update({status:ev.target.value}).eq('id',o.id); card.className='card '+rowColor(o);});
-    card.querySelector('.del').addEventListener('click', async()=>{if(!confirm('Usunąć zamówienie?'))return; await supa.from('seedorders_orders').delete().eq('id',o.id); await loadOrders();});
+    </div>
 
-    // delegacja: ship / edit
-    card.addEventListener('click', async ev=>{
-      const tr=ev.target.closest('tr'); if(!tr) return; const pid=tr.dataset.id;
-      if(ev.target.closest('button.ship')){
-        const delta=Number(tr.querySelector('input').value||0); if(!delta) return;
-        const curr=CACHE.items.find(x=>x.id===pid);
-        const ord=(curr?.ordered_qty!=null)?Number(curr.ordered_qty):Number(curr?.['ilość']||0);
-        const del=Number(curr?.delivered_qty||0);
-        const newDel=Math.min(ord,del+delta);
-        const up=await supa.from('seedorders_items 1').update({delivered_qty:newDel}).eq('id',pid).select('*').single();
-        if(up.error) return alert('Błąd wydania: '+up.error.message);
-        const r=up.data;
-        const ordN=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0);
-        const delN=Number(r.delivered_qty||0);
-        const remN=(r.remaining_qty!=null)?Number(r.remaining_qty):Math.max(ordN-delN,0);
-        tr.querySelector('.delv').textContent=delN; tr.querySelector('.rem').textContent=remN;
-        const idx=CACHE.items.findIndex(x=>x.id===pid); if(idx>=0) CACHE.items[idx]=r;
+    <!-- Kontrahenci -->
+    <div class="card">
+      <div class="collapse-head" data-collapse="#clients-body">
+        <h2 style="margin:0">Kontrahenci (seedorders_clients)</h2>
+        <span class="muted">— kliknij, aby pokazać/ukryć</span>
+      </div>
+      <div class="collapse-body" id="clients-body">
+        <div class="grid g3">
+          <input id="c_name" placeholder="Nazwa (np. Jan Kowalski)">
+          <input id="c_phone" placeholder="Telefon">
+          <input id="c_street" placeholder="Ulica (np. Topolowa 1)">
+        </div>
+        <div class="grid g3 mt8">
+          <input id="c_postal" placeholder="Kod (np. 09-230)">
+          <input id="c_city" placeholder="Miejscowość">
+          <input id="c_country" placeholder="Polska" value="Polska">
+        </div>
+        <div class="row mt8">
+          <button id="c_new" class="secondary">Nowy</button>
+          <button id="c_save">Zapisz</button>
+          <span id="c_out" class="muted">Zapisano ✅</span>
+          <input id="c_search" class="right" placeholder="Szukaj klienta...">
+          <button id="c_reload" class="secondary">Odśwież listę</button>
+        </div>
+        <div class="row mt8">
+          <button id="c_toggle" class="secondary">Pokaż / ukryj listę kontrahentów</button>
+        </div>
+        <div id="c_list" class="mt8"></div>
+      </div>
+    </div>
 
-        await autoUpdateStatusIfDone(o);
-        card.className='card '+rowColor(o);
-        const badge=card.querySelector('.badge:nth-of-type(2)'); if(badge) badge.textContent='Pozostało: '+remainingSum(o);
-      }
-      if(ev.target.closest('button.edit')){
-        const curr=CACHE.items.find(x=>x.id===pid); if(!curr) return;
-        const ord=(curr?.ordered_qty!=null)?Number(curr.ordered_qty):Number(curr?.['ilość']||0);
-        const cen=Number(curr?.cena||0); const dos=curr?.dostawca||'';
-        const r=prompt('ilość;cena;dostawca',`${ord};${cen};${dos}`); if(!r) return; const [nO,nC,nD]=r.split(';');
-        const up=await supa.from('seedorders_items 1').update({"ilość":parseInt(nO||ord,10),cena:Number(nC||cen),dostawca:(nD||dos||'').trim()||null,ordered_qty:parseInt(nO||ord,10)}).eq('id',pid).select('*').single();
-        if(up.error) return alert('Błąd edycji: '+up.error.message);
-        const rr=up.data;
-        const ordN=(rr.ordered_qty!=null)?Number(rr.ordered_qty):Number(rr['ilość']||0);
-        const delN=Number(rr.delivered_qty||0);
-        const remN=(rr.remaining_qty!=null)?Number(rr.remaining_qty):Math.max(ordN-delN,0);
-        tr.querySelector('.ord').textContent=ordN; tr.querySelector('.delv').textContent=delN; tr.querySelector('.rem').textContent=remN;
-        const idx=CACHE.items.findIndex(x=>x.id===pid); if(idx>=0) CACHE.items[idx]=rr;
+    <!-- Zamówienia -->
+    <div class="card">
+      <h2>Zamówienia (ostatnie)</h2>
+      <div class="grid g3">
+        <input id="o_client" list="dl_clients" placeholder="Kontrahent">
+        <input id="o_phone" placeholder="Telefon (auto)">
+        <select id="o_cat">
+          <option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option>
+        </select>
+      </div>
+      <div class="grid g3 mt8">
+        <input id="o_var" list="dl_var" placeholder="Odmiana">
+        <input id="o_qty" type="number" min="1" step="1" value="1" placeholder="Ilość">
+        <input id="o_price" type="number" step="0.01" placeholder="Cena / szt.">
+      </div>
+      <div class="grid g3 mt8">
+        <input id="o_sup" placeholder="Dostawca (opcjonalnie)">
+        <input id="o_note" placeholder="Uwagi (opcjonalnie)">
+        <button id="o_add">Dodaj pozycję</button>
+      </div>
+      <div class="row mt8">
+        <input id="o_search" placeholder="Szukaj: klient/odmiana/uwagi..." style="flex:1">
+        <select id="o_status">
+          <option value="wszystkie">Wszystkie statusy</option>
+          <option value="zamówione">zamówione</option>
+          <option value="w realizacji">w realizacji</option>
+          <option value="dostarczone">dostarczone</option>
+          <option value="anulowane">anulowane</option>
+        </select>
+        <button id="o_reload" class="secondary">Odśwież</button>
+      </div>
+      <div id="o_list" class="mt8"></div>
+      <datalist id="dl_clients"></datalist>
+    </div>
 
-        await autoUpdateStatusIfDone(o);
-        card.className='card '+rowColor(o);
-        const badge=card.querySelector('.badge:nth-of-type(2)'); if(badge) badge.textContent='Pozostało: '+remainingSum(o);
-      }
-    });
+    <!-- Raporty -->
+    <div class="card">
+      <h2>📊 Raporty</h2>
+      <div class="grid g3">
+        <div><label>Od</label><br><input type="date" id="r_from"></div>
+        <div><label>Do</label><br><input type="date" id="r_to"></div>
+        <div>
+          <label>Kategoria</label><br>
+          <select id="r_cat">
+            <option value="(Wszystkie)">(Wszystkie)</option>
+            <option value="Rzepak">Rzepak</option>
+            <option value="Kukurydza">Kukurydza</option>
+            <option value="Zboża">Zboża</option>
+            <option value="Inne">Inne</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mt8">
+        <button id="r_sums">Pokaż sumy</button>
+        <button id="r_missing" class="secondary">Pokaż braki (pozostało)</button>
+        <button id="r_csv" class="secondary">Pobierz CSV</button>
+        <span id="r_info" class="muted"></span>
+      </div>
+      <div class="row mt8">
+        <input id="r_year" value="2025" style="width:140px">
+        <button id="r_year_btn" class="secondary">Raport roczny: kto/co/ile</button>
+      </div>
+      <div id="r_out" class="mt8"></div>
+    </div>
+  </div>
 
-    $('#o_list').appendChild(card);
-  });
-}
-$('#o_reload').onclick=loadOrders; $('#o_search').oninput=renderOrders; $('#o_status').onchange=renderOrders;
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.0/dist/umd/supabase.js"></script>
+  <script>
+  /************** 1) KONFIGURACJA STAŁEGO POŁĄCZENIA **************/
+  const SUPABASE_URL_FIXED  = "https://llatxyfdpurbniewhjft.supabase.co";
+  // 👉 jeśli kiedyś wpisałeś klucz w tej przeglądarce, zadziała z localStorage.
+  //    Jeśli nie – WKLEJ SWÓJ ANON KEY w cudzysłowie zamiast PASTE_ME:
+  const SUPABASE_ANON_FIXED = localStorage.getItem('sb_key') || "PASTE_ME";
 
-/* ===== RAPORTY ===== */
-$('#r_from').value=firstMonth(); $('#r_to').value=today();
-$('#r_run').onclick=()=>runSummary(false);
-$('#r_missing').onclick=()=>runSummary(true);
+  const $ = (q,root=document)=>root.querySelector(q);
+  const $$= (q,root=document)=>Array.from(root.querySelectorAll(q));
+  const money = n => (Number(n)||0).toFixed(2).replace('.',',');
 
-async function runSummary(showMissing){
-  const from=$('#r_from').value||firstMonth(), to=$('#r_to').value||today(), cat=$('#r_cat').value||'';
-  const {data:orders,error:oErr}=await supa.from('seedorders_orders').select('id,created_at,klient').gte('created_at',from+'T00:00:00').lte('created_at',to+'T23:59:59');
-  if(oErr){$('#r_out').textContent='Błąd: '+oErr.message;return;}
-  if(!orders?.length){$('#r_out').innerHTML='<div class="muted">Brak danych w tym zakresie.</div>';return;}
-  const ids=orders.map(o=>o.id);
-  let q=supa.from('seedorders_items 1').select('*').in('order_id',ids); if(cat) q=q.eq('kategoria',cat);
-  const {data:items,error:iErr}=await q; if(iErr){$('#r_out').textContent='Błąd: '+iErr.message;return;}
+  const setStatus = t => { const el=$('#status'); if(el) el.textContent=t; };
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const firstDayMonth = () => { const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
 
-  const map=new Map();
-  items.forEach(r=>{
-    const key=(r.kategoria||'')+'|'+(r['odmiana']||'');
-    const ord=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0);
-    const del=Number(r.delivered_qty||0);
-    const rem=(r.remaining_qty!=null)?Number(r.remaining_qty):Math.max(ord-del,0);
-    const prev=map.get(key)||{kategoria:r.kategoria,odmiana:r['odmiana'],ordered:0,delivered:0,remaining:0};
-    prev.ordered+=ord; prev.delivered+=del; prev.remaining+=rem; map.set(key,prev);
-  });
-  const rows=[...map.values()].sort((a,b)=> (a.kategoria||'').localeCompare(b.kategoria||'') || (a.odmiana||'').localeCompare(b.odmiana||''));
-  const tot=rows.reduce((t,r)=>({ordered:t.ordered+r.ordered,delivered:t.delivered+r.delivered,remaining:t.remaining+r.remaining}),{ordered:0,delivered:0,remaining:0});
-  let html=`<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th></tr></thead><tbody>${
-    rows.map(r=>`<tr><td>${r.kategoria||''}</td><td>${r.odmiana||''}</td><td class="right">${r.ordered}</td><td class="right">${r.delivered}</td><td class="right">${r.remaining}</td></tr>`).join('')
-  }</tbody><tfoot><tr><th colspan="2" class="right">RAZEM</th><th class="right">${tot.ordered}</th><th class="right">${tot.delivered}</th><th class="right">${tot.remaining}</th></tr></tfoot></table>
-  <div class="muted" style="margin-top:6px">Zakres: ${from} – ${to} ${cat?('• '+cat):''}</div>`;
-
-  if(showMissing){
-    const byVar=new Map(); const omap=new Map(orders.map(o=>[o.id,o]));
-    items.forEach(r=>{
-      const ord=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0);
-      const del=Number(r.delivered_qty||0);
-      const rem=(r.remaining_qty!=null)?Number(r.remaining_qty):Math.max(ord-del,0);
-      if(rem<=0) return; const o=omap.get(r.order_id)||{};
-      const key=(r.kategoria||'')+'|'+(r['odmiana']||'');
-      const list=byVar.get(key)||[]; list.push({klient:o.klient||'', remaining:rem}); byVar.set(key,list);
-    });
-    html+= `<div style="margin-top:12px;font-weight:700">Braki (kto czeka i ile):</div>`+
-      ([...byVar.entries()].length? [...byVar.entries()].map(([k,list])=>{
-        const [kat,odm]=k.split('|'); const sum=list.reduce((s,x)=>s+x.remaining,0);
-        return `<div style="margin-top:6px"><b>${kat} • ${odm}</b> — pozostało: ${sum}. Klienci: ${list.map(x=>`${x.klient} (${x.remaining})`).join(', ')}</div>`;
-      }).join('') : `<div class="muted">Brak braków.</div>`);
+  // utwórz klienta supabase
+  let supa = null;
+  function createClient(){
+    if(!SUPABASE_URL_FIXED || !SUPABASE_ANON_FIXED || SUPABASE_ANON_FIXED==="PASTE_ME"){ setStatus('offline'); return null; }
+    try{
+      const c = window.supabase.createClient(SUPABASE_URL_FIXED, SUPABASE_ANON_FIXED);
+      localStorage.setItem('sb_url', SUPABASE_URL_FIXED);
+      localStorage.setItem('sb_key', SUPABASE_ANON_FIXED);
+      $('#url').value = SUPABASE_URL_FIXED;
+      $('#key').value = SUPABASE_ANON_FIXED.slice(0,10)+'…'; // maska
+      setStatus('online');
+      return c;
+    }catch(e){ console.error(e); setStatus('offline'); return null; }
   }
-  $('#r_out').innerHTML=html;
-}
+  // jeśli localStorage ma klucz – użyj go; w przeciwnym razie pokaż offline
+  if(localStorage.getItem('sb_key') && SUPABASE_ANON_FIXED==="PASTE_ME"){
+    // przepisz z localStorage do stałej runtime
+    window.SB_KEY_RUNTIME = localStorage.getItem('sb_key');
+  }
+  supa = (SUPABASE_ANON_FIXED==="PASTE_ME" && window.SB_KEY_RUNTIME)
+    ? (function(){ const c=window.supabase.createClient(SUPABASE_URL_FIXED, window.SB_KEY_RUNTIME); setStatus('online'); $('#url').value=SUPABASE_URL_FIXED; $('#key').value=window.SB_KEY_RUNTIME.slice(0,10)+'…'; return c; })()
+    : createClient();
 
-/* ===== RAPORT ROCZNY + CSV ===== */
-$('#ry_run').onclick=runYear; $('#ry_csv').onclick=downloadYearCsv;
-let YEAR_ROWS=[];
-async function runYear(){
-  const Y=parseInt($('#ry_year').value||new Date().getFullYear(),10); const from=`${Y}-01-01`, to=`${Y}-12-31`;
-  const {data:orders,error:oErr}=await supa.from('seedorders_orders').select('id,klient,telefon,created_at').gte('created_at',from+'T00:00:00').lte('created_at',to+'T23:59:59');
-  if(oErr){$('#ry_out').textContent='Błąd: '+oErr.message;return;}
-  if(!orders?.length){$('#ry_out').innerHTML='<div class="muted">Brak danych.</div>'; YEAR_ROWS=[]; return;}
-  const ids=orders.map(o=>o.id); const omap=new Map(orders.map(o=>[o.id,o]));
-  const {data:items,error:iErr}=await supa.from('seedorders_items 1').select('*').in('order_id',ids);
-  if(iErr){$('#ry_out').textContent='Błąd: '+iErr.message;return;}
+  /************** 2) PAMIĘĆ W PRZEGLĄDARCE **************/
+  let CACHE = {prices:[], clients:[], orders:[], items:[]};
 
-  const perClient=new Map();
-  items.forEach(r=>{
-    const o=omap.get(r.order_id)||{}; const key=o.klient||'(brak)'; const ord=(r.ordered_qty!=null)?Number(r.ordered_qty):Number(r['ilość']||0); const del=Number(r.delivered_qty||0);
-    const entry=perClient.get(key)||{klient:key,telefon:o.telefon||'', pozycje:new Map(), sumOrd:0, sumDel:0};
-    const pkey=(r.kategoria||'')+' • '+(r['odmiana']||'');
-    const P=entry.pozycje.get(pkey)||{variety:pkey,ordered:0,delivered:0}; P.ordered+=ord; P.delivered+=del; entry.pozycje.set(pkey,P); entry.sumOrd+=ord; entry.sumDel+=del; perClient.set(key,entry);
+  /************** 3) POMOCNICZE **************/
+  function collapseInit(){
+    $$('[data-collapse]').forEach(h=>{
+      h.addEventListener('click',()=>{
+        const sel = h.getAttribute('data-collapse');
+        const el = document.querySelector(sel);
+        if(!el) return;
+        el.classList.toggle('hide');
+      });
+    });
+    // domyślne
+    $('#c_list').classList.add('hide');
+    $('#price-body').classList.remove('hide');
+    $('#clients-body').classList.remove('hide');
+  }
+
+  /************** 4) CENNIK **************/
+  async function loadPrices(){
+    if(!supa) return;
+    const { data, error } = await supa.from('seedorders_prices').select('*').order('odmiana');
+    if(error){ $('#p_list').innerHTML = `<div class="err">Błąd: ${error.message}</div>`; return; }
+    CACHE.prices = data||[];
+    renderPrices();
+    fillVarDatalist();
+  }
+
+  function renderPrices(){
+    const pf = {
+      Rzepak: $('#pf_r').checked,
+      Kukurydza: $('#pf_k').checked,
+      'Zboża': $('#pf_z').checked,
+      'Inne': $('#pf_i').checked
+    };
+    const rows = CACHE.prices.filter(r=>pf[r.kategoria]!==false);
+    const html = rows.length
+      ? `<table><thead><tr><th>Odmiana</th><th>Kategoria</th><th class="right">Cena</th><th>Dostawca</th></tr></thead><tbody>`+
+        rows.map(r=>`<tr><td>${r.odmiana}</td><td>${r.kategoria}</td><td class="right">${money(r.cena)} zł</td><td>${r.dostawca||''}</td></tr>`).join('')+
+        `</tbody></table>`
+      : `<div class="muted">Brak pozycji.</div>`;
+    $('#p_list').innerHTML = html;
+  }
+
+  function fillVarDatalist(){
+    const dl = $('#dl_var'); dl.innerHTML='';
+    CACHE.prices.forEach(r=>{ const o=document.createElement('option'); o.value = r.odmiana; dl.appendChild(o); });
+  }
+
+  async function upsertPrice(){
+    if(!supa) return alert('Brak połączenia (wklej anon key w kodzie lub ustawiony w przeglądarce).');
+    const odm = $('#p_var').value.trim();
+    const kat = $('#p_cat').value;
+    const cena= Number($('#p_price').value||0);
+    const dos = $('#p_sup').value.trim() || null;
+    if(!odm){ alert('Podaj odmianę'); return; }
+    const { error } = await supa.from('seedorders_prices')
+      .upsert({ odmiana:odm, kategoria:kat, cena, dostawca:dos })
+      .select().single();
+    if(error){ alert('Błąd: '+error.message); return; }
+    $('#p_var').value=''; $('#p_price').value=''; $('#p_sup').value='';
+    await loadPrices();
+  }
+  async function deletePrice(){
+    const odm = $('#p_var').value.trim();
+    if(!odm){ alert('Podaj odmianę (do usunięcia)'); return; }
+    const { error } = await supa.from('seedorders_prices').delete().eq('odmiana',odm);
+    if(error){ alert('Błąd: '+error.message); return; }
+    $('#p_var').value=''; await loadPrices();
+  }
+
+  /************** 5) KONTRAHENCI **************/
+  function clearClientForm(){
+    $('#c_name').value=''; $('#c_phone').value='';
+    $('#c_street').value=''; $('#c_postal').value=''; $('#c_city').value=''; $('#c_country').value='Polska';
+  }
+  async function loadClients(){
+    const { data, error } = await supa.from('seedorders_clients').select('*').order('name');
+    if(error){ $('#c_list').innerHTML=`<div class="err">Błąd: ${error.message}</div>`; return; }
+    CACHE.clients = data||[];
+    renderClients();
+    const dl=$('#dl_clients'); dl.innerHTML=''; CACHE.clients.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; dl.appendChild(o);});
+  }
+  function renderClients(){
+    const q = $('#c_search').value.trim().toLowerCase();
+    const rows = CACHE.clients.filter(c=>[c.name,c.phone,c.address].filter(Boolean).join(' ').toLowerCase().includes(q));
+    const html = rows.length
+      ? `<table><thead><tr><th>Nazwa</th><th>Telefon</th><th>Adres</th></tr></thead><tbody>`+
+        rows.map(c=>`<tr><td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.address||''}</td></tr>`).join('')+
+        `</tbody></table>`
+      : `<div class="muted">Brak kontrahentów.</div>`;
+    $('#c_list').innerHTML = html;
+  }
+  async function saveClient(){
+    const name=$('#c_name').value.trim(); if(!name){ alert('Podaj nazwę'); return; }
+    const phone=$('#c_phone').value.trim()||null;
+    const adr=[ $('#c_street').value.trim(), $('#c_postal').value.trim(), $('#c_city').value.trim(), $('#c_country').value.trim()||'Polska' ]
+               .filter(Boolean).join(', ');
+    const { error } = await supa.from('seedorders_clients').upsert({ name, phone:phone||null, address: adr||null }).select().single();
+    if(error){ alert('Błąd: '+error.message); return; }
+    $('#c_out').textContent='Zapisano ✅'; await loadClients();
+  }
+
+  $('#c_toggle').addEventListener('click',()=>$('#c_list').classList.toggle('hide'));
+  $('#c_new').addEventListener('click',clearClientForm);
+  $('#c_save').addEventListener('click',saveClient);
+  $('#c_reload').addEventListener('click',loadClients);
+  $('#c_search').addEventListener('input',renderClients);
+
+  // auto-wypełnianie telefonu po wyborze klienta
+  $('#o_client').addEventListener('change', ()=>{
+    const name=$('#o_client').value.trim().toLowerCase();
+    const c = CACHE.clients.find(x=>x.name.toLowerCase()===name);
+    $('#o_phone').value = c?.phone || '';
   });
-  const rows=[...perClient.values()].sort((a,b)=>a.klient.localeCompare(b.klient));
-  YEAR_ROWS=[]; $('#ry_out').innerHTML = rows.map(c=>{
-    const lines=[...c.pozycje.values()].sort((a,b)=>a.variety.localeCompare(b.variety));
-    YEAR_ROWS.push({Klient:c.klient,Telefon:c.telefon,Pozycje:lines.map(x=>`${x.variety}: zam.${x.ordered}, wyd.${x.delivered}`).join(' | '), Zamówiono:c.sumOrd, Wydano:c.sumDel});
-    return `<div class="card"><div><b>${c.klient}</b> ${c.telefon?('• '+c.telefon):''}</div>
-      <div class="muted">Zamówiono: ${c.sumOrd} • Wydano: ${c.sumDel}</div>
-      <ul style="margin:6px 0 0 18px">${lines.map(x=>`<li>${x.variety}: zam. <b>${x.ordered}</b>, wyd. <b>${x.delivered}</b></li>`).join('')}</ul></div>`;
-  }).join('');
-}
-function downloadYearCsv(){
-  if(!YEAR_ROWS.length){alert('Najpierw uruchom raport roczny.'); return;}
-  const head=['Klient','Telefon','Pozycje','Zamówiono','Wydano'];
-  const csv=[head.join(';')].concat(YEAR_ROWS.map(r=>[r.Klient,r.Telefon,r.Pozycje,r.Zamówiono,r.Wydano].map(x=>('"'+String(x).replaceAll('"','""')+'"')).join(';'))).join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='raport_roczny.csv'; a.click();
-}
 
-})();
-</script>
+  /************** 6) ZAMÓWIENIA **************/
+  async function loadOrders(){
+    const [o,i] = await Promise.all([
+      supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(60),
+      supa.from('seedorders_items').select('*'),
+    ]);
+    if(o.error){ $('#o_list').innerHTML=`<div class="err">Błąd: ${o.error.message}</div>`; return; }
+    CACHE.orders=o.data||[]; CACHE.items=i.data||[];
+    renderOrders();
+  }
+  function itemsForOrder(id){ return CACHE.items.filter(p=>p.order_id===id); }
+  function sumFor(items){
+    let ord=0, del=0;
+    items.forEach(p=>{ ord += Number(p.ordered_qty ?? p.ilosc)||0; del += Number(p.delivered_qty||0)||0; });
+    return { ordered:ord, delivered:del };
+  }
+  function remainingFor(order){
+    const its=itemsForOrder(order.id);
+    const s=sumFor(its); const left=Math.max(0, s.ordered - s.delivered);
+    return { total:left };
+  }
+  function renderOrders(){
+    const q = $('#o_search').value.trim().toLowerCase();
+    const st = $('#o_status').value;
+    let arr = CACHE.orders.slice();
+    if(st!=='wszystkie') arr=arr.filter(o=>o.status===st);
+    if(q) arr=arr.filter(o=>[o.klient,o.telefon,o.uwagi].concat(itemsForOrder(o.id).map(p=>p.odmiana)).filter(Boolean).join(' ').toLowerCase().includes(q));
+
+    // sortowanie: aktywne najpierw, „dostarczone” na dół; w obrębie datą malejąco
+    arr.sort((a,b)=>{
+      const ar = remainingFor(a); const br = remainingFor(b);
+      const adone = ar.total===0, bdone = br.total===0;
+      if(adone!==bdone) return adone?1:-1;
+      return (new Date(b.created_at)) - (new Date(a.created_at));
+    });
+
+    const html = arr.map(o=>{
+      const its = itemsForOrder(o.id);
+      const sums = sumFor(its);
+      const rem = remainingFor(o);
+      let cls = rem.total===0 ? 'ord--done' : (sums.delivered>0 ? 'ord--partial' : 'ord--new');
+      const head = `
+        <div class="ord-head"><div class="ord-title">
+          <span class="badge">${o.status||'zamówione'}</span>
+          <b>${(o.created_at||'').slice(0,10)}</b> • ${o.klient||''} • <span class="muted">${o.telefon||''}</span>
+          <span class="pill">Pozostało: ${rem.total}</span>
+        </div>
+        <div class="ord-actions">
+          <select data-id="${o.id}" class="ord-status">
+            ${['zamówione','w realizacji','dostarczone','anulowane'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button data-del="${o.id}" class="secondary">Usuń</button>
+        </div></div>`;
+      const rows = its.map(p=>{
+        const left = Number(p.remaining_qty ?? Math.max(0,(p.ordered_qty??p.ilosc) - (p.delivered_qty||0)));
+        return `<tr>
+          <td>${p.kategoria||''} • ${p.odmiana||''}</td>
+          <td class="right">${Number(p.ordered_qty??p.ilosc)||0}</td>
+          <td class="right">${Number(p.delivered_qty||0)}</td>
+          <td class="right">${left}</td>
+          <td class="right">
+            <div class="row" style="gap:6px;justify-content:flex-end">
+              <input data-pid="${p.id}" class="ship-delta" style="width:70px" type="number" step="1" value="1">
+              <button data-ship="${p.id}">OK</button>
+              <button data-edit="${p.id}" class="secondary">Edytuj</button>
+            </div>
+          </td>
+        </tr>`
+      }).join('');
+      return `<div class="card ${cls}">
+        ${head}
+        <div class="mt8">
+          <table>
+            <thead><tr><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th><th class="right">Wydaj / Edytuj</th></tr></thead>
+            <tbody>${rows||`<tr><td colspan="5" class="muted">Brak pozycji.</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('');
+    $('#o_list').innerHTML = html || `<div class="muted">Brak zamówień.</div>`;
+
+    // zdarzenia
+    $$('.ord-status').forEach(s=>s.addEventListener('change', async e=>{
+      const id = e.target.getAttribute('data-id'); const val=e.target.value;
+      await supa.from('seedorders_orders').update({status:val}).eq('id',id);
+      loadOrders();
+    }));
+    $$('button[data-del]').forEach(b=>b.addEventListener('click', async e=>{
+      const id = e.target.getAttribute('data-del');
+      if(confirm('Usunąć zamówienie?')){
+        await supa.from('seedorders_orders').delete().eq('id',id);
+        await supa.from('seedorders_items').delete().eq('order_id',id);
+        loadOrders();
+      }
+    }));
+    $$('button[data-ship]').forEach(b=>b.addEventListener('click', async e=>{
+      const pid = e.target.getAttribute('data-ship');
+      const delta = Number($(`input[data-pid="${pid}"]`)?.value||0);
+      if(!Number.isFinite(delta) || delta<=0){ alert('Podaj ilość do wydania'); return; }
+      const { error } = await supa.rpc('upsert_delivery_simple', { p_item_id: pid, p_delta: delta });
+      if(error){ alert('Błąd wydania: '+error.message); return; }
+      loadOrders();
+    }));
+    $$('button[data-edit]').forEach(b=>b.addEventListener('click', async e=>{
+      const pid = e.target.getAttribute('data-edit');
+      const rec = CACHE.items.find(x=>x.id===pid); if(!rec){ alert('Nie znaleziono pozycji'); return; }
+      const nowQty = prompt('Nowa ilość zamówiona:', rec.ordered_qty ?? rec.ilosc ?? 1);
+      if(nowQty===null) return;
+      const qn = Number(nowQty);
+      if(!Number.isFinite(qn) || qn<0){ alert('Nieprawidłowa ilość'); return; }
+      const { error } = await supa.from('seedorders_items').update({ ordered_qty: qn }).eq('id',pid);
+      if(error){ alert('Błąd: '+error.message); return; }
+      loadOrders();
+    }));
+  }
+
+  async function addOrder(){
+    if(!supa) return;
+    const klient = $('#o_client').value.trim(); if(!klient) return alert('Podaj kontrahenta');
+    const telefon = $('#o_phone').value.trim()||null;
+    const kat = $('#o_cat').value;
+    const odm = $('#o_var').value.trim(); if(!odm) return alert('Podaj odmianę');
+    const qty = Number($('#o_qty').value||1);
+    const price = Number($('#o_price').value||0);
+    const sup = $('#o_sup').value.trim()||null;
+    const note= $('#o_note').value.trim()||null;
+
+    // auto-create client jeśli nie ma
+    let cl = CACHE.clients.find(c=>c.name.toLowerCase()===klient.toLowerCase());
+    if(!cl){
+      const ins = await supa.from('seedorders_clients').insert({name:klient, phone:telefon}).select().single();
+      if(ins.error){ alert('Błąd klienta: '+ins.error.message); return; }
+      cl = ins.data;
+    }
+
+    // zamówienie „dzisiejsze” lub nowe
+    let ord = CACHE.orders.find(o=>o.klient.toLowerCase()===klient.toLowerCase() && (o.created_at||'').slice(0,10)===todayStr() && o.status!=='anulowane');
+    if(!ord){
+      const ins = await supa.from('seedorders_orders').insert({ klient, telefon, uwagi:note, status:'zamówione', client_id: cl?.id||null }).select().single();
+      if(ins.error){ alert('Błąd zamówienia: '+ins.error.message); return; }
+      ord = ins.data;
+    }else{
+      const patch={}; if(telefon) patch.telefon=telefon; if(note) patch.uwagi = (ord.uwagi||'')?`${ord.uwagi}; ${note}`:note;
+      await supa.from('seedorders_orders').update(patch).eq('id',ord.id);
+    }
+
+    const ins2 = await supa.from('seedorders_items').insert({ order_id: ord.id, kategoria:kat, odmiana:odm, ordered_qty:qty, cena:price, dostawca:sup }).select().single();
+    if(ins2.error){ alert('Błąd pozycji: '+ins2.error.message); return; }
+
+    // wyczyść formularz pozycji
+    $('#o_var').value=''; $('#o_qty').value='1'; $('#o_price').value=''; $('#o_note').value='';
+    loadOrders();
+  }
+
+  $('#o_add').addEventListener('click', addOrder);
+  $('#o_reload').addEventListener('click', loadOrders);
+  $('#o_search').addEventListener('input', renderOrders);
+  $('#o_status').addEventListener('change', renderOrders);
+
+  // auto cena + kategoria po wyborze odmiany
+  $('#o_var').addEventListener('change', ()=>{
+    const v = $('#o_var').value.trim();
+    const p = CACHE.prices.find(x=>x.odmiana===v);
+    if(p){ $('#o_cat').value=p.kategoria; $('#o_price').value=p.cena; $('#o_sup').value=p.dostawca||''; }
+  });
+
+  /************** 7) RAPORTY **************/
+  function setDefaultDates(){
+    $('#r_from').value = firstDayMonth();
+    $('#r_to').value = todayStr();
+  }
+  setDefaultDates();
+
+  async function runSums(mode){ // mode: 'sumy' | 'braki'
+    const p_from = $('#r_from').value, p_to = $('#r_to').value, p_category = ($('#r_cat').value==='(Wszystkie)')?null:$('#r_cat').value;
+    const rpc = mode==='sumy' ? 'report_sums_items_only' : 'report_totals_items_only';
+    const { data, error } = await supa.rpc(rpc, { p_from, p_to, p_category });
+    if(error){ $('#r_out').innerHTML=`<div class="err">Błąd: ${error.message}</div>`; return; }
+    const rows = data||[];
+    let tot={ordered_sum:0, delivered_sum:0, remaining_sum:0};
+    const html = rows.length
+      ? `<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th></tr></thead><tbody>`+
+        rows.map(r=>{tot.ordered_sum+=Number(r.ordered_sum||0);tot.delivered_sum+=Number(r.delivered_sum||0);tot.remaining_sum+=Number(r.remaining_sum||0);
+          return `<tr><td>${r.kategoria||''}</td><td>${r.odmiana||''}</td><td class="right">${r.ordered_sum||0}</td><td class="right">${r.delivered_sum||0}</td><td class="right">${r.remaining_sum||0}</td></tr>`;
+        }).join('')+
+        `</tbody><tfoot><tr><th colspan="2" class="right">RAZEM</th><th class="right">${tot.ordered_sum}</th><th class="right">${tot.delivered_sum}</th><th class="right">${tot.remaining_sum}</th></tr></tfoot></table>`
+      : `<div class="muted">Brak danych w wybranym zakresie.</div>`;
+    $('#r_out').innerHTML = html;
+    $('#r_info').textContent = `Zakres: ${p_from} – ${p_to}`;
+  }
+  $('#r_sums').addEventListener('click', ()=>runSums('sumy'));
+  $('#r_missing').addEventListener('click', ()=>runSums('braki'));
+
+  // CSV z bieżącej tabeli raportu
+  $('#r_csv').addEventListener('click', ()=>{
+    const tbl = $('#r_out table'); if(!tbl){ alert('Najpierw wyświetl raport.'); return; }
+    const rows = Array.from(tbl.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(td=>('"'+td.textContent.replace(/"/g,'""')+'"')).join(','));
+    const blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='raport.csv'; a.click();
+  });
+
+  // raport roczny: kto / co / ile
+  $('#r_year_btn').addEventListener('click', async ()=>{
+    const y = Number($('#r_year').value||new Date().getFullYear());
+    const p_from = `${y}-01-01`, p_to = `${y}-12-31`;
+    const { data, error } = await supa.from('seedorders_orders').select('*').gte('created_at',p_from).lte('created_at',p_to);
+    if(error){ $('#r_out').innerHTML=`<div class="err">Błąd: ${error.message}</div>`; return; }
+    const ords = data||[];
+    const items = (await supa.from('seedorders_items').select('*').gte('created_at',p_from).lte('created_at',p_to)).data||[];
+    const byClient = {};
+    ords.forEach(o=>{
+      const its = items.filter(p=>p.order_id===o.id);
+      if(!its.length) return;
+      const arr = its.map(p=>`${p.kategoria||''} • ${p.odmiana||''}: zam. ${p.ordered_qty??p.ilosc||0}, wyd. ${p.delivered_qty||0}`);
+      byClient[o.klient] = (byClient[o.klient]||[]).concat(arr);
+    });
+    const html = Object.keys(byClient).length
+      ? Object.entries(byClient).map(([k,arr])=>`<div class="card"><b>${k}</b><ul>${arr.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('')
+      : `<div class="muted">Brak danych w roku ${y}.</div>`;
+    $('#r_out').innerHTML = html;
+    $('#r_info').textContent = `Rok: ${y}`;
+  });
+
+  /************** 8) ZDARZENIA / START **************/
+  $('#p_refresh').addEventListener('click', loadPrices);
+  $('#p_save').addEventListener('click', upsertPrice);
+  $('#p_del').addEventListener('click', deletePrice);
+  ['pf_r','pf_k','pf_z','pf_i'].forEach(id=>$('#'+id).addEventListener('change',renderPrices));
+  $('#o_var').addEventListener('input', ()=>{/* datalist */});
+
+  function firstDayMonth(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
+  $('#r_from').value = firstDayMonth(); $('#r_to').value = todayStr();
+
+  collapseInit();
+
+  if(supa){
+    Promise.all([loadPrices(), loadClients()]).then(loadOrders).catch(console.error);
+  }else{
+    setStatus('offline');
+  }
+  </script>
 </body>
 </html>
-
-
-
