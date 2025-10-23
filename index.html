@@ -107,7 +107,7 @@
 
   <!-- DODAJ ZAMÓWIENIE -->
   <div class="card">
-    <h2>Dodaj zamówienie (seedorders_orders + "seedorders_items 1")</h2>
+    <h2>Dodaj zamówienie (seedorders_orders + seedorders_items 1)</h2>
 
     <div class="grid e3">
       <input id="o_client" list="dl_clients" placeholder="Kontrahent (wpisz lub wybierz)">
@@ -148,38 +148,57 @@
     <div id="o_list" style="margin-top:8px"></div>
   </div>
 
+  <!-- RAPORTY: sumy + odebrane -->
+  <div class="card">
+    <h2>📊 Raporty: sumy & odebrane</h2>
+    <div class="grid e3">
+      <div><label>Od</label><br><input type="date" id="r_from"></div>
+      <div><label>Do</label><br><input type="date" id="r_to"></div>
+      <div>
+        <label>Kategoria</label><br>
+        <select id="r_cat">
+          <option value="">(Wszystkie)</option>
+          <option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button id="r_run">Pokaż sumy</button>
+      <button id="r_deliveries">Pokaż odebrane (szczegóły)</button>
+    </div>
+    <div id="r_out" class="small" style="margin-top:8px"></div>
+    <div id="r_out2" class="small" style="margin-top:8px"></div>
+  </div>
+
 </div>
 
 <script>
 (() => {
-  // ===== KONFIG / PAMIĘĆ
+  // ===== Tools
   const $ = (s)=>document.querySelector(s);
   const $$ = (s)=>Array.from(document.querySelectorAll(s));
-  let supa=null;
   const money=(x)=> (Number(x)||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function firstDayOfMonth(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10); }
 
-  function saveCreds(){
-    localStorage.setItem('sb_url', $('#url').value.trim());
-    localStorage.setItem('sb_key', $('#key').value.trim());
-  }
-  function loadCreds(){
-    $('#url').value = localStorage.getItem('sb_url') || '';
-    $('#key').value = localStorage.getItem('sb_key') || '';
-  }
+  // ===== State
+  let supa=null;
+  let CACHE = { prices:[], clients:[], orders:[], items:[] };
+
+  // ===== Połączenie
+  function saveCreds(){ localStorage.setItem('sb_url',$('#url').value.trim()); localStorage.setItem('sb_key',$('#key').value.trim()); }
+  function loadCreds(){ $('#url').value=localStorage.getItem('sb_url')||''; $('#key').value=localStorage.getItem('sb_key')||''; }
   loadCreds();
 
-  // ===== POŁĄCZENIE
   $('#connect').onclick = async ()=>{
     const url=$('#url').value.trim(), key=$('#key').value.trim();
-    if(!url||!key){ alert('Wpisz URL i anon key z Supabase.'); return; }
+    if(!url||!key){ alert('Wpisz URL i anon key.'); return; }
     supa = window.supabase.createClient(url,key);
     saveCreds();
-    $('#status').textContent='online';
-    $('#status').classList.add('ok');
+    $('#status').textContent='online'; $('#status').classList.add('ok');
     await reloadAll();
   };
 
-  // jeśli już mamy klucze – połącz automatycznie
   if($('#url').value && $('#key').value){
     supa = window.supabase.createClient($('#url').value,$('#key').value);
     $('#status').textContent='online'; $('#status').classList.add('ok');
@@ -188,32 +207,29 @@
 
   async function reloadAll(){
     await Promise.all([loadPrices(), loadClients(), loadOrders()]);
+    // daty raportu
+    $('#r_from').value = firstDayOfMonth();
+    $('#r_to').value = today();
   }
 
-  // ===== CENNIK
-  let CACHE = { prices:[], clients:[], orders:[], items:[] };
-
+  // ===== Cennik
   async function loadPrices(){
     if(!supa) return;
     const { data, error } = await supa.from('seedorders_prices').select('*').order('odmiana');
     if(error){ $('#p_list').textContent='Błąd: '+error.message; return; }
     CACHE.prices = data||[];
-    const rows = CACHE.prices.map(r=>({
-      odmiana: r.odmiana, kategoria:r.kategoria, cena: Number(r.cena||0), dostawca:r.dostawca||''
-    }));
+    const rows = CACHE.prices.map(r=>({odmiana:r.odmiana,kategoria:r.kategoria,cena:Number(r.cena||0),dostawca:r.dostawca||''}));
     $('#p_list').innerHTML = rows.length
       ? `<table><thead><tr><th>Odmiana</th><th>Kategoria</th><th class="right">Cena</th><th>Dostawca</th></tr></thead><tbody>${
           rows.map(r=>`<tr data-var="${r.odmiana}" data-cat="${r.kategoria}">
             <td>${r.odmiana}</td><td>${r.kategoria}</td><td class="right">${money(r.cena)}</td><td>${r.dostawca||''}</td></tr>`).join('')
         }</tbody></table>`
       : `<div class="muted">Brak pozycji cennika.</div>`;
-    // datalist odmian
-    const dl = $('#dl_var'); dl.innerHTML = '';
-    rows.forEach(r=>{ const o=document.createElement('option'); o.value=r.odmiana; dl.appendChild(o); });
+    refreshVarDatalist();
   }
   $('#p_reload').onclick = loadPrices;
 
-  // klik w wiersz cennika = uzupełnij pola
+  // klik w cennik -> uzupełnij pola
   document.addEventListener('click',(e)=>{
     const tr = e.target.closest('#p_list table tbody tr'); if(!tr) return;
     $('#p_var').value = tr.dataset.var || '';
@@ -223,29 +239,23 @@
     $('#p_sup').value = tr.children[3]?.textContent||'';
   });
 
+  // upsert (odmiana,kategoria)
   $('#p_save').onclick = async()=>{
     if(!supa) return alert('Najpierw Połącz.');
-    const odm = $('#p_var').value.trim(); if(!odm) return alert('Podaj odmianę');
-    const kat = $('#p_cat').value.trim();
-    const cena = Number($('#p_price').value||0);
-    const dost = $('#p_sup').value.trim() || null;
-
-    // sprawdź czy istnieje
-    const { data:exists } = await supa.from('seedorders_prices').select('id').eq('odmiana',odm).eq('kategoria',kat).limit(1);
-    if(exists && exists.length){
-      const { error } = await supa.from('seedorders_prices').update({ cena, dostawca:dost }).eq('id', exists[0].id);
-      if(error) return alert('Błąd: '+error.message);
-    } else {
-      const { error } = await supa.from('seedorders_prices').insert({ odmiana:odm, kategoria:kat, cena, dostawca:dost });
-      if(error) return alert('Błąd: '+error.message);
-    }
+    const odm=$('#p_var').value.trim(); if(!odm) return alert('Podaj odmianę');
+    const kat=$('#p_cat').value.trim();
+    const cena=Number($('#p_price').value||0);
+    const dost=$('#p_sup').value.trim()||null;
+    const { error } = await supa.from('seedorders_prices')
+      .upsert({ odmiana:odm,kategoria:kat,cena,dostawca:dost }, { onConflict:'odmiana,kategoria' });
+    if(error) return alert('Błąd: '+error.message);
     await loadPrices();
   };
 
   $('#p_delete').onclick = async()=>{
     if(!supa) return alert('Najpierw Połącz.');
-    const odm = $('#p_var').value.trim(); const kat=$('#p_cat').value.trim();
-    if(!odm) return alert('Najpierw kliknij wiersz lub wpisz odmianę.');
+    const odm=$('#p_var').value.trim(); const kat=$('#p_cat').value.trim();
+    if(!odm) return alert('Najpierw wpisz/kliknij odmianę.');
     if(!confirm('Usunąć pozycję cennika?')) return;
     const { error } = await supa.from('seedorders_prices').delete().eq('odmiana',odm).eq('kategoria',kat);
     if(error) return alert('Błąd: '+error.message);
@@ -253,12 +263,15 @@
     await loadPrices();
   };
 
-  // ===== KONTRAHENCI
+  // ===== Kontrahenci
   async function loadClients(){
     if(!supa) return;
     const { data, error } = await supa.from('seedorders_clients').select('*').order('name');
     if(error){ $('#c_list').textContent='Błąd: '+error.message; return; }
     CACHE.clients=data||[];
+    renderClients();
+  }
+  function renderClients(){
     const q = ($('#c_search').value||'').toLowerCase();
     const rows = CACHE.clients.filter(c => [c.name,c.phone,c.street,c.city,c.postal_code].filter(Boolean).join(' ').toLowerCase().includes(q));
     $('#c_list').innerHTML = rows.length
@@ -269,12 +282,12 @@
           </tr>`).join('')
         }</tbody></table>`
       : `<div class="muted">Brak kontrahentów.</div>`;
-    // datalist klientów dla „Dodaj zamówienie”
+    // datalist dla zamówień
     const dl=$('#dl_clients'); dl.innerHTML='';
     CACHE.clients.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; dl.appendChild(o); });
   }
   $('#c_reload').onclick = loadClients;
-  $('#c_search').oninput = loadClients;
+  $('#c_search').oninput = renderClients;
 
   $('#c_add').onclick = async()=>{
     if(!supa) return alert('Najpierw Połącz.');
@@ -286,86 +299,89 @@
     await loadClients();
   };
 
-  // klik w wiersz klienta -> formularz edycji
+  // klik w klienta -> edycja
   document.addEventListener('click',(e)=>{
     const tr = e.target.closest('#c_list table tbody tr'); if(!tr) return;
     const c = CACHE.clients.find(x=>x.id===tr.dataset.id) || CACHE.clients.find(x=>x.name===tr.dataset.name);
     if(!c) return;
-    $('#e_name').value = c.name||'';
-    $('#e_phone').value = c.phone||'';
-    $('#e_street').value = c.street||'';
-    $('#e_postal').value = c.postal_code||'';
-    $('#e_city').value = c.city||'';
-    $('#e_country').value = c.country||'Polska';
-    $('#e_save').dataset.id = c.id||'';
-    $('#e_info').textContent = 'Załadowano klienta do edycji.';
+    $('#e_name').value=c.name||''; $('#e_phone').value=c.phone||'';
+    $('#e_street').value=c.street||''; $('#e_postal').value=c.postal_code||'';
+    $('#e_city').value=c.city||''; $('#e_country').value=c.country||'Polska';
+    $('#e_save').dataset.id=c.id||''; $('#e_info').textContent='Załadowano klienta do edycji.';
   });
 
   $('#e_save').onclick = async()=>{
-    const id = $('#e_save').dataset.id;
-    const payload = {
-      name: $('#e_name').value.trim(),
-      phone: $('#e_phone').value.trim()||null,
-      street: $('#e_street').value.trim()||null,
-      postal_code: $('#e_postal').value.trim()||null,
-      city: $('#e_city').value.trim()||null,
-      country: $('#e_country').value.trim()||null
+    const id=$('#e_save').dataset.id;
+    const payload={
+      name:$('#e_name').value.trim(),
+      phone:$('#e_phone').value.trim()||null,
+      street:$('#e_street').value.trim()||null,
+      postal_code:$('#e_postal').value.trim()||null,
+      city:$('#e_city').value.trim()||null,
+      country:$('#e_country').value.trim()||null
     };
     if(!payload.name){ $('#e_info').textContent='Podaj nazwę'; return; }
-    let q;
-    if(id) q = supa.from('seedorders_clients').update(payload).eq('id', id);
-    else q = supa.from('seedorders_clients').update(payload).eq('name', payload.name);
+    let q; if(id) q=supa.from('seedorders_clients').update(payload).eq('id',id);
+    else q=supa.from('seedorders_clients').update(payload).eq('name',payload.name);
     const { error } = await q;
     $('#e_info').textContent = error ? ('Błąd: '+error.message) : 'Zapisano ✅ (kliknij „Odśwież listę”).';
     if(!error) loadClients();
   };
 
-  // ===== DODAJ ZAMÓWIENIE (+ pozycja)
+  // ===== Dodaj zamówienie
+  function refreshVarDatalist(){
+    const cat = $('#o_cat').value.trim();
+    const dl = $('#dl_var'); dl.innerHTML='';
+    CACHE.prices.filter(r=>!cat || r.kategoria===cat).forEach(r=>{
+      const o=document.createElement('option'); o.value=r.odmiana; dl.appendChild(o);
+    });
+  }
+  $('#o_cat').addEventListener('change', refreshVarDatalist);
+
   $('#o_client').addEventListener('change', ()=>{
-    const name = ($('#o_client').value||'').trim().toLowerCase();
-    const cl = CACHE.clients.find(c=>c.name.toLowerCase()===name);
+    const name=($('#o_client').value||'').trim().toLowerCase();
+    const cl=CACHE.clients.find(c=>c.name.toLowerCase()===name);
     if(cl && cl.phone) $('#o_phone').value=cl.phone;
   });
   $('#o_var').addEventListener('change', ()=>{
-    const v = ($('#o_var').value||'').trim();
-    const p = CACHE.prices.find(x=>x.odmiana===v);
-    if(p){ $('#o_cat').value=p.kategoria; $('#o_price').value=p.cena; $('#o_sup').value=p.dostawca||''; }
+    const v=($('#o_var').value||'').trim();
+    const p=CACHE.prices.find(x=>x.odmiana===v);
+    if(p){ $('#o_cat').value=p.kategoria; $('#o_price').value=p.cena; $('#o_sup').value=p.dostawca||''; refreshVarDatalist(); }
   });
 
   $('#o_add').onclick = async()=>{
     if(!supa) return alert('Najpierw Połącz.');
-    const klient = ($('#o_client').value||'').trim(); if(!klient) return alert('Podaj kontrahenta');
-    const telefon = ($('#o_phone').value||'').trim()||null;
-    const kategoria = $('#o_cat').value.trim();
-    const odm = ($('#o_var').value||'').trim(); if(!odm) return alert('Podaj odmianę');
-    const qty = parseInt($('#o_qty').value||'0',10); if(!qty) return alert('Podaj ilość');
-    const cena = Number($('#o_price').value||0);
-    const dost = ($('#o_sup').value||'').trim() || null;
-    const uwagi = ($('#o_note').value||'').trim() || null;
+    const klient=($('#o_client').value||'').trim(); if(!klient) return alert('Podaj kontrahenta');
+    const telefon=($('#o_phone').value||'').trim()||null;
+    const kategoria=$('#o_cat').value.trim();
+    const odm=($('#o_var').value||'').trim(); if(!odm) return alert('Podaj odmianę');
+    const qty=parseInt($('#o_qty').value||'0',10); if(!qty) return alert('Podaj ilość');
+    const cena=Number($('#o_price').value||0);
+    const dost=($('#o_sup').value||'').trim()||null;
+    const uwagi=($('#o_note').value||'').trim()||null;
 
-    // klient (autocreate)
-    let cl = CACHE.clients.find(c=>c.name.toLowerCase()===klient.toLowerCase());
+    // klient (auto)
+    let cl=CACHE.clients.find(c=>c.name.toLowerCase()===klient.toLowerCase());
     if(!cl){
-      const ins = await supa.from('seedorders_clients').insert({ name:klient, phone:telefon }).select('*').single();
+      const ins=await supa.from('seedorders_clients').insert({name:klient,phone:telefon}).select('*').single();
       if(ins.error) return alert('Błąd klient: '+ins.error.message);
-      cl = ins.data; CACHE.clients.push(cl);
+      cl=ins.data; CACHE.clients.push(cl);
     }
 
-    // zamówienie dla dziś (lub nowe)
-    let ord = CACHE.orders.find(o => (o.klient||'').toLowerCase()===klient.toLowerCase() && (o.status||'nowe')!=='anulowane' && String(o.created_at||'').slice(0,10)===today());
+    // zamówienie z dziś (nieanulowane) albo nowe
+    let ord=CACHE.orders.find(o => (o.klient||'').toLowerCase()===klient.toLowerCase() && (o.status||'nowe')!=='anulowane' && String(o.created_at||'').slice(0,10)===today());
     if(!ord){
-      const ins = await supa.from('seedorders_orders').insert({ klient, telefon, uwagi:uwagi||'', status:'nowe', client_id:cl.id||null }).select('*').single();
+      const ins=await supa.from('seedorders_orders').insert({klient,telefon,uwagi:uwagi||'',status:'nowe',client_id:cl.id||null}).select('*').single();
       if(ins.error) return alert('Błąd tworzenia zamówienia: '+ins.error.message);
-      ord = ins.data; CACHE.orders.unshift(ord);
-    } else {
-      // dopisz/uzupełnij telefon, uwagi, client_id
+      ord=ins.data; CACHE.orders.unshift(ord);
+    }else{
       const patch={}; if(telefon) patch.telefon=telefon; if(uwagi) patch.uwagi=(ord.uwagi||'')+'\n'+uwagi; if(cl.id) patch.client_id=cl.id;
-      if(Object.keys(patch).length){ await supa.from('seedorders_orders').update(patch).eq('id', ord.id); }
+      if(Object.keys(patch).length){ await supa.from('seedorders_orders').update(patch).eq('id',ord.id); }
     }
 
-    // pozycja w "seedorders_items 1"
-    const ins2 = await supa.from('"seedorders_items 1"').insert({
-      order_id: ord.id, "kategoria": kategoria, "odmiana": odm, "ilość": qty, "cena": cena, "dostawca": dost
+    // pozycja
+    const ins2 = await supa.from('seedorders_items 1').insert({
+      order_id:ord.id, "kategoria":kategoria, "odmiana":odm, "ilość":qty, "cena":cena, "dostawca":dost
     });
     if(ins2.error) return alert('Błąd pozycji: '+ins2.error.message);
 
@@ -373,18 +389,17 @@
     await loadOrders();
   };
 
-  function today(){ return new Date().toISOString().slice(0,10); }
-
-  // ===== ZAMÓWIENIA: lista + pozycje + częściowe wydania
+  // ===== Zamówienia + pozycje + wydania
   async function loadOrders(){
     if(!supa) return;
     const [o,i] = await Promise.all([
-      supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(100),
-      supa.from('"seedorders_items 1"').select('*')
+      supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(200),
+      supa.from('seedorders_items 1').select('*')
     ]);
-    CACHE.orders = o.data||[]; CACHE.items = i.data||[];
+    CACHE.orders=o.data||[]; CACHE.items=i.data||[];
     renderOrders();
   }
+
   function itemsForOrder(id){
     return CACHE.items.filter(p=>p.order_id===id).map(r=>{
       const ordered = (r.ordered_qty!=null)? Number(r.ordered_qty) : Number(r['ilość']||0);
@@ -396,25 +411,23 @@
   function colorFor(rem,del){ return rem>0 && del>0 ? 'warn' : (rem>0 ? 'bad' : 'ok'); }
 
   function renderOrders(){
-    const q = ($('#o_search').value||'').toLowerCase();
-    const st = $('#o_status').value;
-    let arr = CACHE.orders.slice();
-    if(st!=='wszystkie') arr=arr.filter(o=> (o.status||'nowe')===st);
+    const q=($('#o_search').value||'').toLowerCase();
+    const st=$('#o_status').value;
+    let arr=CACHE.orders.slice();
+    if(st!=='wszystkie') arr=arr.filter(o=>(o.status||'nowe')===st);
     if(q) arr=arr.filter(o=>{
       const txt=[o.klient,o.telefon,o.uwagi].filter(Boolean).join(' ').toLowerCase();
       const iv=itemsForOrder(o.id).map(p=>p.odmiana).join(' ').toLowerCase();
       return (txt+' '+iv).includes(q);
     });
 
-    const box = $('#o_list'); box.innerHTML='';
+    const box=$('#o_list'); box.innerHTML='';
     if(!arr.length){ box.innerHTML='<div class="muted">Brak zamówień.</div>'; return; }
 
     arr.forEach(o=>{
-      const its = itemsForOrder(o.id);
-      const val = its.reduce((a,b)=>a + (Number(b.ordered)||0)*(Number(b.cena||0)), 0);
-
-      const div = document.createElement('div'); div.className='card';
-      div.innerHTML = `
+      const its=itemsForOrder(o.id);
+      const div=document.createElement('div'); div.className='card';
+      div.innerHTML=`
         <div class="row" style="justify-content:space-between">
           <div>
             <span class="badge">${(o.status||'nowe')}</span>
@@ -455,51 +468,140 @@
           `:`<div class="muted">Brak pozycji.</div>`}
         </div>
       `;
-      // ustaw status w select
-      div.querySelector('.o-st').value = (o.status||'nowe');
-
-      // zmiana statusu
+      // status
+      div.querySelector('.o-st').value=(o.status||'nowe');
       div.querySelector('.o-st').addEventListener('change', async (ev)=>{
-        const val = ev.target.value;
-        await supa.from('seedorders_orders').update({ status:val }).eq('id', o.id);
+        await supa.from('seedorders_orders').update({status:ev.target.value}).eq('id',o.id);
       });
-
-      // usunięcie zamówienia
+      // usuń zamówienie
       div.querySelector('.o-del').addEventListener('click', async ()=>{
         if(!confirm('Usunąć zamówienie?')) return;
-        await supa.from('seedorders_orders').delete().eq('id', o.id);
+        await supa.from('seedorders_orders').delete().eq('id',o.id);
         await loadOrders();
       });
-
-      // częściowe wydania
+      // częściowe wydanie
       div.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('button.ship'); if(!btn) return;
-        const tr = btn.closest('tr'); const itemId = tr.dataset.id;
-        const delta = Number(tr.querySelector('input').value||0); if(!delta) return;
+        const btn=e.target.closest('button.ship'); if(!btn) return;
+        const tr=btn.closest('tr'); const itemId=tr.dataset.id;
+        const delta=Number(tr.querySelector('input').value||0); if(!delta) return;
         btn.disabled=true; btn.textContent='…';
         try{
-          const res = await supa.rpc('upsert_delivery_simple', { p_item_id:itemId, p_delta:delta });
-          const r = (res.data && res.data[0]) || {};
-          // odśwież liczby w wierszu
-          const tds = tr.children;
-          tds[2].textContent = Number(r.delivered_qty||0);
-          const remaining = (r.remaining_qty!=null)? Number(r.remaining_qty) : Math.max(Number(r.ordered_qty||0) - Number(r.delivered_qty||0), 0);
-          tds[3].textContent = remaining;
-          tds[3].className = 'right ' + (remaining>0 && Number(r.delivered_qty||0)>0 ? 'warn' : (remaining>0 ? 'bad' : 'ok'));
-        }catch(err){
-          alert('Błąd wydania: '+(err.message||err));
-        }finally{
-          btn.disabled=false; btn.textContent='OK';
-        }
+          const res=await supa.rpc('upsert_delivery_simple',{p_item_id:itemId,p_delta:delta});
+          const r=(res.data&&res.data[0])||{};
+          const tds=tr.children;
+          tds[2].textContent=Number(r.delivered_qty||0);
+          const remaining=(r.remaining_qty!=null)? Number(r.remaining_qty) : Math.max(Number(r.ordered_qty||0)-Number(r.delivered_qty||0),0);
+          tds[3].textContent=remaining;
+          tds[3].className='right '+(remaining>0 && Number(r.delivered_qty||0)>0?'warn':(remaining>0?'bad':'ok'));
+        }catch(err){ alert('Błąd wydania: '+(err.message||err)); }
+        finally{ btn.disabled=false; btn.textContent='OK'; }
       });
 
       $('#o_list').appendChild(div);
     });
   }
+  $('#o_reload').onclick=loadOrders;
+  $('#o_search').oninput=renderOrders;
+  $('#o_status').onchange=renderOrders;
 
-  $('#o_reload').onclick = loadOrders;
-  $('#o_search').oninput = renderOrders;
-  $('#o_status').onchange = renderOrders;
+  // ===== Raporty: SUMY + ODEBRANE
+  async function runSummary(showDetails=false){
+    if(!supa) return;
+    const from=$('#r_from').value||firstDayOfMonth();
+    const to=$('#r_to').value||today();
+    const cat=$('#r_cat').value||'';
+
+    // Pobierz zamówienia w zakresie dat
+    const { data:orders, error:oErr } = await supa
+      .from('seedorders_orders').select('id,created_at,klient,telefon')
+      .gte('created_at', from+'T00:00:00').lte('created_at', to+'T23:59:59').order('created_at',{ascending:false});
+    if(oErr){ $('#r_out').textContent='Błąd: '+oErr.message; return; }
+    if(!orders?.length){ $('#r_out').innerHTML='<div class="muted">Brak danych w tym zakresie.</div>'; $('#r_out2').innerHTML=''; return; }
+
+    const ids = orders.map(o=>o.id);
+    // Pobierz pozycje dla tych zamówień
+    let q = supa.from('seedorders_items 1').select('*').in('order_id', ids);
+    if(cat) q = q.eq('kategoria', cat);
+    const { data:items, error:iErr } = await q;
+    if(iErr){ $('#r_out').textContent='Błąd: '+iErr.message; return; }
+
+    // Agregacja SUM
+    const map = new Map();
+    items.forEach(r=>{
+      const k = (r.kategoria||'')+'||'+(r['odmiana']||'');
+      const ord = (r.ordered_qty!=null)? Number(r.ordered_qty) : Number(r['ilość']||0);
+      const del = Number(r.delivered_qty||0);
+      const rem = (r.remaining_qty!=null)? Number(r.remaining_qty) : Math.max(ord-del,0);
+      const prev = map.get(k)||{kategoria:r.kategoria,odmiana:r['odmiana'],ordered:0,delivered:0,remaining:0};
+      prev.ordered += ord; prev.delivered += del; prev.remaining += rem; map.set(k,prev);
+    });
+    const rows = Array.from(map.values()).sort((a,b)=> (a.kategoria||'').localeCompare(b.kategoria||'') || (a.odmiana||'').localeCompare(b.odmiana||''));
+    const tot = rows.reduce((t,r)=>({ordered:t.ordered+r.ordered,delivered:t.delivered+r.delivered,remaining:t.remaining+r.remaining}),{ordered:0,delivered:0,remaining:0});
+
+    $('#r_out').innerHTML = `
+      <table>
+        <thead><tr><th>Kategoria</th><th>Odmiana</th><th class="right">Zamówiono</th><th class="right">Wydano</th><th class="right">Pozostało</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`<tr>
+            <td>${r.kategoria||''}</td><td>${r.odmiana||''}</td>
+            <td class="right">${r.ordered}</td>
+            <td class="right">${r.delivered}</td>
+            <td class="right">${r.remaining}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2" class="right">RAZEM</th>
+            <th class="right">${tot.ordered}</th>
+            <th class="right">${tot.delivered}</th>
+            <th class="right">${tot.remaining}</th>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="muted" style="margin-top:6px">Zakres: ${from} – ${to} ${cat?('• '+cat):''}</div>
+    `;
+
+    if(!showDetails){ $('#r_out2').innerHTML=''; return; }
+
+    // Szczegóły ODEBRANE (kto odebrał)
+    // Filtr: delivered_qty > 0
+    const itemsByOrder = items.filter(r => Number(r.delivered_qty||0) > 0);
+    if(!itemsByOrder.length){ $('#r_out2').innerHTML='<div class="muted">Brak odebranych pozycji w tym zakresie.</div>'; return; }
+    const oMap = new Map(orders.map(o=>[o.id,o]));
+    const det = itemsByOrder.map(r=>{
+      const ord = oMap.get(r.order_id)||{};
+      return {
+        date: String(ord.created_at||'').slice(0,10),
+        klient: ord.klient||'',
+        odmiana: r['odmiana']||'',
+        kategoria: r.kategoria||'',
+        delivered: Number(r.delivered_qty||0),
+        remaining: (r.remaining_qty!=null)? Number(r.remaining_qty) : Math.max(((r.ordered_qty!=null)? Number(r.ordered_qty):Number(r['ilość']||0)) - Number(r.delivered_qty||0),0)
+      };
+    }).sort((a,b)=> a.date<b.date?1:-1);
+
+    $('#r_out2').innerHTML = `
+      <div style="margin-top:10px;font-weight:600">Odebrane (szczegóły)</div>
+      <table>
+        <thead><tr>
+          <th>Data</th><th>Klient</th><th>Kategoria</th><th>Odmiana</th>
+          <th class="right">Wydano</th><th class="right">Pozostało</th>
+        </tr></thead>
+        <tbody>
+          ${det.map(r=>`<tr>
+            <td>${r.date}</td><td>${r.klient}</td><td>${r.kategoria}</td><td>${r.odmiana}</td>
+            <td class="right">${r.delivered}</td><td class="right">${r.remaining}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  $('#r_run').onclick = ()=>runSummary(false);
+  $('#r_deliveries').onclick = ()=>runSummary(true);
+
+  // ===== Start
+  $('#o_qty').value='1';
 })();
 </script>
 </body>
