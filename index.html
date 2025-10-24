@@ -1,69 +1,54 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SeedOrders — Rolmix Bielsk</title>
-  <meta name="theme-color" content="#001020" />
-  <!-- wbudowana favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🌱</text></svg>">
-  <style>
-    :root{
-      --bg:#001020;--card:#111827;--edge:#1f2937;--txt:#e5e7eb;--muted:#9ca3af;
-      --ok:#16a34a;--warn:#f59e0b;--bad:#ef4444;--btn:#2563eb
-    }
-    html,body{background:var(--bg);color:var(--txt);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:1120px;margin:24px auto;padding:0 12px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .right{margin-left:auto;display:flex;gap:8px;align-items:center}
-    .card{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:12px;margin:12px 0}
-    h1{margin:0;font-size:20px}
-    h2{margin:0 0 8px}
-    input,select,button,textarea{font:inherit;color:var(--txt);background:#0b1220;border:1px solid #334155;border-radius:10px;padding:9px}
-    button{cursor:pointer;background:var(--btn);border-color:var(--btn)}
-    button.secondary{background:#0b1220;border:1px solid #334155}
-    button.danger{background:#b91c1c;border-color:#b91c1c}
-    table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #334155;padding:8px;text-align:left}
-    th{background:#0b1228}
-    .muted{color:var(--muted)}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;font-size:12px;color:#cbd5e1}
-    .status-online{color:#22c55e}
-    .status-offline{color:#ef4444}
-    .toggle{cursor:pointer;color:#93c5fd;text-decoration:underline}
-    .hide{display:none}
-    /* kolory bloków zamówień */
-    .ord{border:2px solid #334155;border-radius:14px;padding:10px;margin:10px 0}
-    .ord.new{box-shadow:inset 0 0 0 2px rgba(22,163,74,.25)}
-    .ord.part{box-shadow:inset 0 0 0 2px rgba(245,158,11,.35)}
-    .ord.done{box-shadow:inset 0 0 0 2px rgba(239,68,68,.35)}
-    .pill{padding:3px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.1/dist/umd/supabase.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SeedOrders — Rolmix Bielsk</title>
+<meta name="theme-color" content="#001020"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🌱</text></svg>">
+<style>
+:root{--bg:#001020;--card:#111827;--edge:#1f2937;--txt:#e5e7eb;--muted:#9ca3af;--ok:#16a34a;--warn:#f59e0b;--bad:#ef4444;--btn:#2563eb}
+html,body{background:var(--bg);color:var(--txt);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:1120px;margin:24px auto;padding:0 12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:12px;margin:12px 0}
+h2{margin:0 0 8px}
+input,select,button,textarea{font:inherit;color:var(--txt);background:#0b1220;border:1px solid #334155;border-radius:10px;padding:9px}
+button{cursor:pointer;background:var(--btn);border-color:var(--btn)}
+button.secondary{background:#0b1220;border:1px solid #334155}
+button.danger{background:#b91c1c;border-color:#b91c1c}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #334155;padding:8px;text-align:left}
+th{background:#0b1228}
+.muted{color:var(--muted)}
+.toggle{cursor:pointer;color:#93c5fd;text-decoration:underline}
+.hide{display:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;font-size:12px;color:#cbd5e1}
+.pill{padding:3px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155}
+.status-online{color:#22c55e}
+.status-offline{color:#ef4444}
+.ord{border:2px solid #334155;border-radius:14px;padding:10px;margin:10px 0}
+.ord.new{box-shadow:inset 0 0 0 2px rgba(22,163,74,.25)}
+.ord.part{box-shadow:inset 0 0 0 2px rgba(245,158,11,.35)}
+.ord.done{box-shadow:inset 0 0 0 2px rgba(239,68,68,.35)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.1/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <!-- nagłówek -->
   <div class="row" style="justify-content:space-between">
-    <div class="row" style="gap:12px">
-      <div style="font-weight:800;font-size:18px">🌱 SeedOrders</div>
-      <div class="muted">Rolmix Bielsk</div>
-    </div>
-    <div class="row small">Status: <b id="status" class="status-offline">offline</b></div>
+    <div class="row" style="gap:12px"><div style="font-weight:800;font-size:18px">🌱 SeedOrders</div><div class="muted">Rolmix Bielsk</div></div>
+    <div class="row small">Status: <b id="status" class="status-offline" title="kliknij, by zobaczyć info">offline</b></div>
   </div>
 
-  <!-- Połączenie (stałe w kodzie) + przycisk zapisu do localStorage -->
   <div class="card">
     <h2>Połączenie z Supabase</h2>
-    <div class="row">
-      <input id="url" style="flex:1" readonly />
-      <input id="key" style="flex:1" readonly />
-      <button id="saveLS" class="secondary">Zapisz w tej przeglądarce</button>
-    </div>
-    <div class="muted" style="margin-top:6px">Połączenie jest ustawione na stałe w kodzie. Przycisk zapisuje też wartości do localStorage (na wypadek pracy w trybie prywatnym).</div>
+    <div class="row"><input id="url" style="flex:1" readonly/><input id="key" style="flex:1" readonly/><button id="saveLS" class="secondary">Zapisz w tej przeglądarce</button></div>
+    <div class="muted" style="margin-top:6px">Połączenie ustawione na stałe w kodzie. Ten panel to tylko podgląd.</div>
   </div>
 
-  <!-- CENNIK (zwinięty domyślnie) -->
+  <!-- Cennik -->
   <div class="card">
     <div class="row">
       <h2 style="margin-right:6px">Cennik (seedorders_prices)</h2>
@@ -79,9 +64,7 @@
     <div id="p_body" class="hide">
       <div class="row" style="margin-top:8px">
         <input id="p_var" list="dl_var" placeholder="Odmiana" style="flex:2"><datalist id="dl_var"></datalist>
-        <select id="p_cat" style="flex:1">
-          <option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option>
-        </select>
+        <select id="p_cat" style="flex:1"><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
         <input id="p_price" type="number" step="0.01" placeholder="Cena" style="flex:1">
         <input id="p_sup" placeholder="Dostawca (opcjonalnie)" style="flex:2">
         <button id="p_save">Zapisz / zaktualizuj</button>
@@ -91,43 +74,34 @@
     </div>
   </div>
 
-  <!-- KONTRAHENCI (zwinięci domyślnie) -->
+  <!-- Kontrahenci -->
   <div class="card">
     <div class="row">
       <h2 style="margin-right:6px">Kontrahenci (seedorders_clients)</h2>
       <span id="c_toggleHead" class="toggle">Pokaż</span>
-      <div class="right">
-        <input id="c_search" placeholder="Szukaj…" />
-        <button id="c_reload" class="secondary">Odśwież listę</button>
-      </div>
+      <div class="right"><input id="c_search" placeholder="Szukaj…" /><button id="c_reload" class="secondary">Odśwież listę</button></div>
     </div>
     <div id="c_body" class="hide">
-      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px">
-        <input id="c_name" placeholder="Nazwa (np. Jan Kowalski)">
-        <input id="c_phone" placeholder="Telefon">
-        <input id="c_street" placeholder="Ulica (np. Topolowa 1)">
-        <input id="c_postal" placeholder="Kod (np. 09-230)">
-        <input id="c_city" placeholder="Miejscowość">
-        <input id="c_country" placeholder="Polska" value="Polska">
+      <div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap">
+        <input id="c_name" placeholder="Nazwa (np. Jan Kowalski)" style="flex:1 1 260px">
+        <input id="c_phone" placeholder="Telefon" style="flex:1 1 180px">
+        <input id="c_street" placeholder="Ulica (np. Topolowa 1)" style="flex:1 1 280px">
+        <input id="c_postal" placeholder="Kod (np. 09-230)" style="flex:1 1 140px">
+        <input id="c_city" placeholder="Miejscowość" style="flex:1 1 200px">
+        <input id="c_country" value="Polska" placeholder="Kraj" style="flex:1 1 140px">
       </div>
-      <div class="row" style="margin-top:8px">
-        <button id="c_new" class="secondary">Nowy</button>
-        <button id="c_save">Zapisz</button>
-        <span id="c_info" class="muted"></span>
-      </div>
+      <div class="row" style="margin-top:8px"><button id="c_new" class="secondary">Nowy</button><button id="c_save">Zapisz</button><span id="c_info" class="muted"></span></div>
       <div id="c_list" style="margin-top:10px"></div>
     </div>
   </div>
 
-  <!-- ZAMÓWIENIA -->
+  <!-- Zamówienia -->
   <div class="card">
     <h2>Dodaj zamówienie</h2>
     <div class="row">
       <input id="o_client" list="dl_clients" placeholder="Kontrahent" style="flex:2"><datalist id="dl_clients"></datalist>
       <input id="o_phone" placeholder="Telefon (auto)" style="flex:1">
-      <select id="o_cat" style="flex:1">
-        <option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option>
-      </select>
+      <select id="o_cat" style="flex:1"><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select>
     </div>
     <div class="row" style="margin-top:8px">
       <input id="o_var" list="dl_var2" placeholder="Odmiana" style="flex:2"><datalist id="dl_var2"></datalist>
@@ -144,476 +118,340 @@
       <h2 style="margin:0">Zamówienia (ostatnie)</h2>
       <div class="right">
         <input id="o_search" placeholder="Szukaj: klient/odmiana/uwagi…" style="flex:1">
-        <select id="o_status">
-          <option value="wszystkie">Wszystkie</option>
-          <option value="zamówione">zamówione</option>
-          <option value="częściowe">częściowe</option>
-          <option value="dostarczone">dostarczone</option>
-        </select>
+        <select id="o_status"><option value="wszystkie">Wszystkie</option><option value="zamówione">zamówione</option><option value="częściowe">częściowe</option><option value="dostarczone">dostarczone</option></select>
         <button id="o_reload" class="secondary">Odśwież</button>
       </div>
     </div>
     <div id="o_list" style="margin-top:8px"></div>
   </div>
 
-  <!-- RAPORTY -->
+  <!-- Raporty -->
   <div class="card">
     <h2>📊 Raporty</h2>
     <div class="row">
       <div><label>Od<br><input type="date" id="r_from"></label></div>
       <div><label>Do<br><input type="date" id="r_to"></label></div>
-      <div>
-        <label>Kategoria<br>
-          <select id="r_cat">
-            <option>(Wszystkie)</option>
-            <option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option>
-          </select>
-        </label>
-      </div>
-      <div class="right">
-        <button id="r_sums">Pokaż sumy</button>
-        <button id="r_missing" class="secondary">Pokaż braki (pozostało)</button>
-        <button id="r_csv" class="secondary">Pobierz CSV</button>
-      </div>
+      <div><label>Kategoria<br><select id="r_cat"><option>(Wszystkie)</option><option>Rzepak</option><option>Kukurydza</option><option>Zboża</option><option>Inne</option></select></label></div>
+      <div class="right"><button id="r_sums">Pokaż sumy</button><button id="r_missing" class="secondary">Pokaż braki (pozostało)</button><button id="r_csv" class="secondary">Pobierz CSV</button></div>
     </div>
-    <div class="row" style="margin-top:8px">
-      <input id="r_year" type="number" min="2000" max="2100" style="width:140px">
-      <button id="r_year_btn" class="secondary">Raport roczny: kto/co/ile</button>
-      <span id="r_info" class="muted"></span>
-    </div>
+    <div class="row" style="margin-top:8px"><input id="r_year" type="number" min="2000" max="2100" style="width:140px"><button id="r_year_btn" class="secondary">Raport roczny: kto/co/ile</button><span id="r_info" class="muted"></span></div>
     <div id="r_out" style="margin-top:8px"></div>
   </div>
 </div>
 
 <script>
-/* === 1) POŁĄCZENIE (stałe) + SINGLETON === */
+/* ===== KONFIG STAŁY (Twoje klucze) ===== */
 const SUPABASE_URL  = "https://llatxyfdpurbniewhjft.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXR4eWZkcHVyYm5pZXdoamZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NzA1NzgsImV4cCI6MjA3MTI0NjU3OH0.Q8EJPQN-XsgRnw6dltGUS-DGcf8SiMAX886NUQAcDqY";
 
+/* ===== UTIL ===== */
 const $  = (q,root=document)=>root.querySelector(q);
 const $$ = (q,root=document)=>Array.from(root.querySelectorAll(q));
 const money = n => (Number(n)||0).toFixed(2).replace('.',',');
-const statusEl = () => $('#status');
+function setStatus(ok,extra=''){const el=$('#status');el.textContent=ok?'online':'offline';el.className=ok?'status-online':'status-offline';el.title=extra||el.title}
 
-function setStatus(ok){
-  const el=statusEl(); if(!el) return;
-  el.textContent = ok ? 'online' : 'offline';
-  el.className = ok ? 'status-online' : 'status-offline';
-}
-
-let supa = null;
+/* ===== CLIENT (singleton) ===== */
+let supa=null;
 function createClient(){
-  if(window.__SEEDORDERS_SUPA__) return window.__SEEDORDERS_SUPA__;
-  try{
-    const url  = SUPABASE_URL;
-    const key  = SUPABASE_ANON;
-    const cli  = window.supabase.createClient(url, key, {
-      auth: { storageKey:'seedorders-auth', autoRefreshToken:true, persistSession:true, detectSessionInUrl:false }
-    });
-    window.__SEEDORDERS_SUPA__ = cli;
-    localStorage.setItem('sb_url', url);
-    localStorage.setItem('sb_key', key);
-    if($('#url')) $('#url').value = url;
-    if($('#key')) $('#key').value = key.slice(0,10)+'…';
-    setStatus(true);
-    return cli;
-  }catch(e){
-    console.error(e); setStatus(false); return null;
-  }
+  if(window.__SUPA__) return window.__SUPA__;
+  const cli = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON,{auth:{storageKey:'seedorders-auth',detectSessionInUrl:false}});
+  window.__SUPA__=cli;
+  $('#url').value=SUPABASE_URL; $('#key').value=SUPABASE_ANON.slice(0,10)+'…';
+  localStorage.setItem('sb_url',SUPABASE_URL); localStorage.setItem('sb_key',SUPABASE_ANON);
+  setStatus(true,"Połączono. Kliknij by zobaczyć diagnostykę.");
+  return cli;
 }
 supa = createClient();
-$('#saveLS').addEventListener('click', ()=>{
-  localStorage.setItem('sb_url', SUPABASE_URL);
-  localStorage.setItem('sb_key', SUPABASE_ANON);
-  alert('Zapisano w tej przeglądarce.');
-});
+$('#saveLS').addEventListener('click',()=>{localStorage.setItem('sb_url',SUPABASE_URL);localStorage.setItem('sb_key',SUPABASE_ANON);alert('Zapisano w tej przeglądarce.');});
 
-/* === 2) STAN PAMIĘCI === */
+/* ===== DYNAMICZNE DOPASOWANIE SCHEMATU ===== */
+const SCHEMA = {
+  ORDERS_TBL: 'seedorders_orders',
+  ITEMS_TBL:  'seedorders_items',
+  COL: { client:null, phone:null, notes:null, status:'status', created:'created_at' } // zostaną wykryte
+};
+
+async function detectSchema(){
+  // 1) items table
+  let ok = await supa.from('seedorders_items').select('id').limit(1);
+  if(ok.error){ // spróbuj z nazwą ze spacją
+    ok = await supa.from('seedorders_items 1').select('id').limit(1);
+    if(!ok.error){ SCHEMA.ITEMS_TBL='seedorders_items 1'; }
+  }
+  // 2) orders columns
+  const probe = await supa.from(SCHEMA.ORDERS_TBL).select('*').limit(1);
+  if(!probe.error){
+    const row = (probe.data&&probe.data[0]) || {};
+    const keys = Object.keys(row);
+    SCHEMA.COL.client = keys.includes('client') ? 'client' : (keys.includes('klient') ? 'klient' : 'client');
+    SCHEMA.COL.phone  = keys.includes('phone')  ? 'phone'  : (keys.includes('telefon')? 'telefon':'phone');
+    SCHEMA.COL.notes  = keys.includes('notes')  ? 'notes'  : (keys.includes('uwagi')  ? 'uwagi'  :'notes');
+  }else{
+    // jeśli tabela pusta/bez uprawnień – spróbuj heurystycznie
+    // nic nie zmieniamy – i tak będziemy łapać błąd i komunikat
+  }
+  $('#status').addEventListener('click',()=>{
+    alert(`Diagnostyka połączenia:
+- Orders table: ${SCHEMA.ORDERS_TBL}
+- Items table:  ${SCHEMA.ITEMS_TBL}
+- Kolumny orders: ${SCHEMA.COL.client}, ${SCHEMA.COL.phone}, ${SCHEMA.COL.notes}, status`);
+  });
+}
+
+/* ===== CACHE ===== */
 const CACHE = { prices:[], clients:[], orders:[], items:[] };
 
-/* === 3) CENNIK === */
+/* ===== CENNIK ===== */
 async function loadPrices(){
-  const { data, error } = await supa.from('seedorders_prices').select('*').order('odmiana');
-  if(error){ $('#p_list').innerHTML = `<div class="muted">Błąd: ${error.message}</div>`; return; }
-  CACHE.prices = data||[];
-  renderPrices();
-  fillVarLists();
+  const {data,error}=await supa.from('seedorders_prices').select('*').order('odmiana');
+  if(error){ $('#p_list').innerHTML=`<div class="muted">Błąd: ${error.message}</div>`; return; }
+  CACHE.prices=data||[]; renderPrices(); fillVarLists();
 }
 function renderPrices(){
-  const allowed = new Set($$('.p-cat').filter(c=>c.checked).map(c=>c.value));
-  const rows = CACHE.prices.filter(r=>allowed.has(r.kategoria));
-  const html = rows.length
-    ? `<table><thead><tr><th>Odmiana</th><th>Kategoria</th><th class="right">Cena</th><th>Dostawca</th></tr></thead><tbody>`+
-      rows.map(r=>`<tr><td>${r.odmiana}</td><td>${r.kategoria}</td><td class="right">${money(r.cena)} zł</td><td>${r.dostawca||''}</td></tr>`).join('')+
-      `</tbody></table>`
+  const allowed=new Set($$('.p-cat').filter(c=>c.checked).map(c=>c.value));
+  const rows=CACHE.prices.filter(r=>allowed.has(r.kategoria));
+  $('#p_list').innerHTML = rows.length
+    ? `<table><thead><tr><th>Odmiana</th><th>Kategoria</th><th class="right">Cena</th><th>Dostawca</th></tr></thead><tbody>${
+        rows.map(r=>`<tr><td>${r.odmiana}</td><td>${r.kategoria}</td><td class="right">${money(r.cena)} zł</td><td>${r.dostawca||''}</td></tr>`).join('')
+      }</tbody></table>`
     : `<div class="muted">Brak pozycji dla zaznaczonych kategorii.</div>`;
-  $('#p_list').innerHTML = html;
 }
 function fillVarLists(){
-  // do cennika
-  const dl = $('#dl_var'); dl.innerHTML='';
-  CACHE.prices.forEach(r=>{ const o=document.createElement('option'); o.value=r.odmiana; dl.appendChild(o); });
-  // do zamówień (filtr po kategorii)
-  const dl2 = $('#dl_var2'); dl2.innerHTML='';
-  const cat = $('#o_cat').value;
-  CACHE.prices.filter(r=>r.kategoria===cat).forEach(r=>{ const o=document.createElement('option'); o.value=r.odmiana; dl2.appendChild(o); });
+  const dl=$('#dl_var'); dl.innerHTML=''; CACHE.prices.forEach(r=>{const o=document.createElement('option');o.value=r.odmiana;dl.appendChild(o);});
+  refreshOrderDatalist();
 }
 async function upsertPrice(){
-  const odm = $('#p_var').value.trim();
-  const kat = $('#p_cat').value;
-  const cena = Number($('#p_price').value||0);
-  const dos = $('#p_sup').value.trim()||null;
-  if(!odm){ alert('Podaj odmianę'); return; }
-  // manualny upsert po (odmiana,kategoria)
-  const { data: ex } = await supa.from('seedorders_prices').select('id').eq('odmiana',odm).eq('kategoria',kat).maybeSingle();
-  if(ex){
-    const { error } = await supa.from('seedorders_prices').update({cena, dostawca:dos}).eq('id',ex.id);
-    if(error){ alert('Błąd: '+error.message); return; }
+  const odm=$('#p_var').value.trim(); if(!odm){alert('Podaj odmianę');return;}
+  const kat=$('#p_cat').value; const cena=Number($('#p_price').value||0); const dos=$('#p_sup').value.trim()||null;
+  // pseudo-upsert: sprawdź, potem update/insert (bez ON CONFLICT, więc bez wymaganego indeksu)
+  const ex=await supa.from('seedorders_prices').select('id').eq('odmiana',odm).eq('kategoria',kat).maybeSingle();
+  if(ex.data){
+    const {error}=await supa.from('seedorders_prices').update({cena,dostawca:dos}).eq('id',ex.data.id);
+    if(error){alert('Błąd: '+error.message);return;}
   }else{
-    const { error } = await supa.from('seedorders_prices').insert({odmiana:odm,kategoria:kat,cena,dostawca:dos});
-    if(error){ alert('Błąd: '+error.message); return; }
+    const {error}=await supa.from('seedorders_prices').insert({odmiana:odm,kategoria:kat,cena,dostawca:dos});
+    if(error){alert('Błąd: '+error.message);return;}
   }
-  $('#p_var').value=''; $('#p_price').value=''; $('#p_sup').value='';
-  await loadPrices();
+  $('#p_var').value=''; $('#p_price').value=''; $('#p_sup').value=''; await loadPrices();
 }
 async function deletePrice(){
-  const odm=$('#p_var').value.trim(), kat=$('#p_cat').value;
-  if(!odm){ alert('Podaj odmianę do usunięcia'); return; }
-  const { error } = await supa.from('seedorders_prices').delete().eq('odmiana',odm).eq('kategoria',kat);
-  if(error){ alert('Błąd: '+error.message); return; }
+  const odm=$('#p_var').value.trim(); const kat=$('#p_cat').value;
+  if(!odm){alert('Podaj odmianę');return;}
+  const {error}=await supa.from('seedorders_prices').delete().eq('odmiana',odm).eq('kategoria',kat);
+  if(error){alert('Błąd: '+error.message);return;}
   await loadPrices();
 }
-$('#p_reload').addEventListener('click', loadPrices);
-$$('.p-cat').forEach(c=>c.addEventListener('change', renderPrices));
-$('#p_toggle').addEventListener('click', ()=>{ const el=$('#p_body'); const vis=el.classList.toggle('hide'); $('#p_toggle').textContent = vis?'Pokaż':'Ukryj'; });
-$('#p_save').addEventListener('click', upsertPrice);
-$('#p_del').addEventListener('click', deletePrice);
-$('#p_cat').addEventListener('change', fillVarLists);
+$('#p_reload').addEventListener('click',loadPrices);
+$$('.p-cat').forEach(c=>c.addEventListener('change',renderPrices));
+$('#p_toggle').addEventListener('click',()=>{const el=$('#p_body');const vis=el.classList.toggle('hide');$('#p_toggle').textContent=vis?'Pokaż':'Ukryj';});
+$('#p_save').addEventListener('click',upsertPrice);
+$('#p_del').addEventListener('click',deletePrice);
+$('#p_cat').addEventListener('change',fillVarLists);
 
-/* === 4) KONTRAHENCI === */
-function clearClientForm(){
-  $('#c_name').value=''; $('#c_phone').value='';
-  $('#c_street').value=''; $('#c_postal').value=''; $('#c_city').value=''; $('#c_country').value='Polska';
-}
+/* ===== KLIENCI ===== */
+function clearClientForm(){ $('#c_name').value='';$('#c_phone').value='';$('#c_street').value='';$('#c_postal').value='';$('#c_city').value='';$('#c_country').value='Polska'; }
 async function loadClients(){
-  const { data, error } = await supa.from('seedorders_clients').select('*').order('name');
-  if(error){ $('#c_list').innerHTML = `<div class="muted">Błąd: ${error.message}</div>`; return; }
-  CACHE.clients = data||[];
-  renderClients();
-  // datalist dla zamówień
-  const dl=$('#dl_clients'); dl.innerHTML='';
-  CACHE.clients.forEach(c=>{ const o=document.createElement('option'); o.value=c.name; dl.appendChild(o);});
+  const {data,error}=await supa.from('seedorders_clients').select('*').order('name');
+  if(error){$('#c_list').innerHTML=`<div class="muted">Błąd: ${error.message}</div>`;return;}
+  CACHE.clients=data||[]; renderClients();
+  const dl=$('#dl_clients'); dl.innerHTML=''; CACHE.clients.forEach(c=>{const o=document.createElement('option');o.value=c.name;o.label=c.phone||'';dl.appendChild(o);});
 }
 function renderClients(){
-  const q = ($('#c_search').value||'').toLowerCase();
-  const rows = CACHE.clients.filter(c=>[c.name,c.phone,c.address].filter(Boolean).join(' ').toLowerCase().includes(q));
+  const q=($('#c_search').value||'').toLowerCase();
+  const rows=CACHE.clients.filter(c=>[c.name,c.phone,c.address].filter(Boolean).join(' ').toLowerCase().includes(q));
   $('#c_list').innerHTML = rows.length
-    ? `<table><thead><tr><th>Nazwa</th><th>Telefon</th><th>Adres</th></tr></thead><tbody>`+
-      rows.map(c=>`<tr><td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.address||''}</td></tr>`).join('')+
-      `</tbody></table>`
-    : `<div class="muted">Brak kontrahentów.</div>`;
+    ? `<table><thead><tr><th>Nazwa</th><th>Telefon</th><th>Adres</th></tr></thead><tbody>${
+       rows.map(c=>`<tr><td>${c.name||''}</td><td>${c.phone||''}</td><td>${c.address||''}</td></tr>`).join('')
+      }</tbody></table>` : `<div class="muted">Brak kontrahentów.</div>`;
 }
 async function saveClient(){
-  const name=$('#c_name').value.trim(); if(!name){ alert('Podaj nazwę'); return; }
+  const name=$('#c_name').value.trim(); if(!name){alert('Podaj nazwę');return;}
   const phone=$('#c_phone').value.trim()||null;
   const adr=[ $('#c_street').value.trim(), $('#c_postal').value.trim(), $('#c_city').value.trim(), ($('#c_country').value.trim()||'Polska') ].filter(Boolean).join(', ');
-  const { data: ex } = await supa.from('seedorders_clients').select('id').eq('name',name).maybeSingle();
-  if(ex){ const { error } = await supa.from('seedorders_clients').update({phone,address:adr}).eq('id',ex.id); if(error){ alert('Błąd: '+error.message); return; } }
-  else { const { error } = await supa.from('seedorders_clients').insert({name,phone,address:adr}); if(error){ alert('Błąd: '+error.message); return; } }
-  $('#c_info').textContent='Zapisano ✅'; setTimeout(()=>$('#c_info').textContent='',1500);
-  await loadClients();
+  const ex=await supa.from('seedorders_clients').select('id').eq('name',name).maybeSingle();
+  if(ex.data){ const {error}=await supa.from('seedorders_clients').update({phone,address:adr}).eq('id',ex.data.id); if(error){alert('Błąd: '+error.message);return;} }
+  else{ const {error}=await supa.from('seedorders_clients').insert({name,phone,address:adr}); if(error){alert('Błąd: '+error.message);return;} }
+  $('#c_info').textContent='Zapisano ✅'; setTimeout(()=>$('#c_info').textContent='',1500); await loadClients();
 }
-$('#c_toggleHead').addEventListener('click', ()=>{ const el=$('#c_body'); const vis=el.classList.toggle('hide'); $('#c_toggleHead').textContent=vis?'Pokaż':'Ukryj'; });
-$('#c_reload').addEventListener('click', loadClients);
-$('#c_search').addEventListener('input', renderClients);
-$('#c_new').addEventListener('click', clearClientForm);
-$('#c_save').addEventListener('click', saveClient);
+$('#c_toggleHead').addEventListener('click',()=>{const el=$('#c_body');const vis=el.classList.toggle('hide');$('#c_toggleHead').textContent=vis?'Pokaż':'Ukryj';});
+$('#c_reload').addEventListener('click',loadClients);
+$('#c_search').addEventListener('input',renderClients);
+$('#c_new').addEventListener('click',clearClientForm);
+$('#c_save').addEventListener('click',saveClient);
+$('#o_client').addEventListener('change',()=>{const n=$('#o_client').value.trim().toLowerCase();const c=CACHE.clients.find(x=>x.name && x.name.toLowerCase()===n);$('#o_phone').value=c?.phone||'';});
 
-// auto telefon po wyborze klienta
-$('#o_client').addEventListener('change', ()=>{
-  const name=$('#o_client').value.trim().toLowerCase();
-  const c=CACHE.clients.find(x=>x.name && x.name.toLowerCase()===name);
-  $('#o_phone').value = c?.phone || '';
-});
+/* ===== ZAMÓWIENIA ===== */
+function refreshOrderDatalist(){
+  const cat=$('#o_cat').value; const dl=$('#dl_var2'); dl.innerHTML=''; CACHE.prices.filter(p=>p.kategoria===cat).forEach(p=>{const o=document.createElement('option');o.value=p.odmiana;dl.appendChild(o);});
+}
+$('#o_cat').addEventListener('change',()=>{refreshOrderDatalist();$('#o_var').dispatchEvent(new Event('input'));});
+$('#o_var').addEventListener('input',()=>{const cat=$('#o_cat').value,v=($('#o_var').value||'').toLowerCase();const p=CACHE.prices.find(x=>x.kategoria===cat && x.odmiana.toLowerCase()===v);if(p){$('#o_price').value=Number(p.cena||0);$('#o_sup').value=p.dostawca||'';}});
 
-/* === 5) ZAMÓWIENIA === */
 async function addOrder(){
-  const klient = $('#o_client').value.trim(); if(!klient) return alert('Podaj kontrahenta');
-  const telefon = $('#o_phone').value.trim()||null;
-  const kat = $('#o_cat').value;
-  const odm = $('#o_var').value.trim(); if(!odm) return alert('Podaj odmianę');
-  const qty = Number($('#o_qty').value||1);
-  const cena = Number($('#o_price').value||0);
-  const dost = $('#o_sup').value.trim()||null;
-  const note = $('#o_note').value.trim()||null;
+  const klient=$('#o_client').value.trim(); if(!klient) return alert('Podaj kontrahenta');
+  const telefon=$('#o_phone').value.trim()||null;
+  const kat=$('#o_cat').value; const odm=$('#o_var').value.trim(); if(!odm) return alert('Podaj odmianę');
+  const qty=Number($('#o_qty').value||1); const cena=Number($('#o_price').value||0); const dost=$('#o_sup').value.trim()||null; const note=$('#o_note').value.trim()||null;
 
-  // klient (auto-create)
-  let clientId=null;
-  const { data: cex } = await supa.from('seedorders_clients').select('id').eq('name',klient).maybeSingle();
-  if(cex){ clientId=cex.id; if(telefon){ await supa.from('seedorders_clients').update({phone:telefon}).eq('id',clientId);} }
-  else{
-    const ins = await supa.from('seedorders_clients').insert({name:klient, phone:telefon}).select().single();
-    if(ins.error){ alert('Błąd klienta: '+ins.error.message); return; }
-    clientId=ins.data.id;
-  }
+  // klient auto-create
+  let clientId=null; const ex=await supa.from('seedorders_clients').select('id').eq('name',klient).maybeSingle();
+  if(ex.data){ clientId=ex.data.id; if(telefon) await supa.from('seedorders_clients').update({phone:telefon}).eq('id',clientId); }
+  else{ const ins=await supa.from('seedorders_clients').insert({name:klient,phone:telefon}).select().single(); if(ins.error){alert('Błąd klienta: '+ins.error.message);return;} clientId=ins.data.id; }
 
-  // zamówienie – bierz ostatnie nie-dostarczone lub utwórz nowe
-  const last = await supa.from('seedorders_orders').select('*').eq('client',klient).order('created_at',{ascending:false}).limit(1).maybeSingle();
+  // wykryte nazwy kolumn
+  const C=SCHEMA.COL, T=SCHEMA.ORDERS_TBL, IT=SCHEMA.ITEMS_TBL;
+
+  // ostatnie zamówienie klienta (nie-dostarczone)
+  const last=await supa.from(T).select('*').eq(C.client,klient).order(C.created,{ascending:false}).limit(1).maybeSingle();
   let orderId=null;
   if(last.data && last.data.status!=='dostarczone'){
-    orderId = last.data.id;
-    const patch={}; if(note) patch.notes = (last.data.notes?last.data.notes+' | ':'')+note; if(telefon) patch.phone=telefon;
-    if(Object.keys(patch).length) await supa.from('seedorders_orders').update(patch).eq('id',orderId);
+    orderId=last.data.id;
+    const patch={}; if(note) patch[C.notes]=(last.data[C.notes]?last.data[C.notes]+' | ':'')+note; if(telefon) patch[C.phone]=telefon;
+    if(Object.keys(patch).length) await supa.from(T).update(patch).eq('id',orderId);
   }else{
-    const ins = await supa.from('seedorders_orders').insert({client:klient, phone:telefon, notes:note, status:'zamówione', client_id:clientId}).select().single();
+    const payload={}; payload[C.client]=klient; payload[C.phone]=telefon; payload[C.notes]=note; payload.status='zamówione'; payload.client_id=clientId;
+    const ins=await supa.from(T).insert(payload).select().single();
     if(ins.error){ alert('Błąd zamówienia: '+ins.error.message); return; }
     orderId=ins.data.id;
   }
 
   // pozycja
-  const it = await supa.from('seedorders_items').insert({order_id:orderId,kategoria:kat,odmiana:odm,ilosc:qty,cena:cena,dostawca:dost,delivered_qty:0}).select().single();
+  const it=await supa.from(IT).insert({order_id:orderId,kategoria:kat,odmiana:odm,ilosc:qty,cena:cena,dostawca:dost,delivered_qty:0}).select().single();
   if(it.error){ alert('Błąd pozycji: '+it.error.message); return; }
 
-  // czyszczenie
-  $('#o_var').value=''; $('#o_qty').value='1'; $('#o_price').value=''; $('#o_sup').value=''; $('#o_note').value='';
-
+  $('#o_var').value='';$('#o_qty').value='1';$('#o_price').value='';$('#o_sup').value='';$('#o_note').value='';
   await loadOrders();
 }
-$('#o_add').addEventListener('click', addOrder);
-
-// podpowiedź ceny po wyborze odmiany
-function refreshOrderDatalist(){
-  const cat=$('#o_cat').value;
-  const dl=$('#dl_var2'); dl.innerHTML='';
-  CACHE.prices.filter(p=>p.kategoria===cat).forEach(p=>{ const o=document.createElement('option'); o.value=p.odmiana; dl.appendChild(o); });
-}
-$('#o_cat').addEventListener('change', ()=>{ refreshOrderDatalist(); $('#o_var').dispatchEvent(new Event('input')); });
-$('#o_var').addEventListener('input', ()=>{
-  const cat=$('#o_cat').value, v=($('#o_var').value||'').toLowerCase();
-  const p=CACHE.prices.find(x=>x.kategoria===cat && x.odmiana.toLowerCase()===v);
-  if(p){ $('#o_price').value=Number(p.cena||0); $('#o_sup').value=p.dostawca||''; }
-});
+$('#o_add').addEventListener('click',addOrder);
 
 async function loadOrders(){
-  const o = await supa.from('seedorders_orders').select('*').order('created_at',{ascending:false}).limit(100);
-  const i = await supa.from('seedorders_items').select('*');
-  if(o.error||i.error){ $('#o_list').innerHTML = `<div class="muted">Błąd: ${(o.error||i.error).message}</div>`; return; }
-  CACHE.orders=o.data||[]; CACHE.items=i.data||[];
-  renderOrders();
+  const T=SCHEMA.ORDERS_TBL, IT=SCHEMA.ITEMS_TBL;
+  const o=await supa.from(T).select('*').order(SCHEMA.COL.created,{ascending:false}).limit(100);
+  const i=await supa.from(IT).select('*');
+  if(o.error||i.error){ $('#o_list').innerHTML=`<div class="muted">Błąd: ${(o.error||i.error).message}</div>`; return; }
+  CACHE.orders=o.data||[]; CACHE.items=i.data||[]; renderOrders();
 }
-
 function itemsForOrder(id){ return CACHE.items.filter(p=>p.order_id===id); }
 function computeStatus(items){
-  const ordered = items.reduce((s,x)=>s+(Number(x.ordered_qty ?? x.ilosc)||0),0);
-  const delivered = items.reduce((s,x)=>s+(Number(x.delivered_qty)||0),0);
-  const remaining = Math.max(0, ordered - delivered);
-  let stat='zamówione';
-  if(delivered>0 && remaining>0) stat='częściowe';
-  if(remaining===0 && ordered>0) stat='dostarczone';
-  return {ordered, delivered, remaining, stat};
+  const ordered=items.reduce((s,x)=>s+(Number(x.ordered_qty??x.ilosc)||0),0);
+  const delivered=items.reduce((s,x)=>s+(Number(x.delivered_qty)||0),0);
+  const remaining=Math.max(0,ordered-delivered);
+  let stat='zamówione'; if(delivered>0 && remaining>0) stat='częściowe'; if(remaining===0 && ordered>0) stat='dostarczone';
+  return {ordered,delivered,remaining,stat};
 }
-
 function renderOrders(){
-  const q = ($('#o_search').value||'').toLowerCase();
-  const st = $('#o_status').value;
-  const groups = CACHE.orders.map(o=>{
-    const its = itemsForOrder(o.id);
-    const s=computeStatus(its);
-    return {o,its,s};
-  }).filter(g=>{
-    const txt=[g.o.client||g.o.klient,g.o.phone||g.o.telefon,g.o.notes||g.o.uwagi].concat(g.its.map(x=>x.odmiana)).filter(Boolean).join(' ').toLowerCase();
+  const q=($('#o_search').value||'').toLowerCase(); const st=$('#o_status').value; const C=SCHEMA.COL;
+  const groups=CACHE.orders.map(o=>{const its=itemsForOrder(o.id); const s=computeStatus(its); return {o,its,s};})
+  .filter(g=>{
+    const txt=[g.o[C.client],g.o[C.phone],g.o[C.notes]].concat(g.its.map(x=>x.odmiana)).filter(Boolean).join(' ').toLowerCase();
     if(q && !txt.includes(q)) return false;
     if(st!=='wszystkie' && g.s.stat!==st) return false;
     return true;
-  });
+  })
+  .sort((a,b)=>{const r=v=>v.s.stat==='dostarczone'?2:(v.s.stat==='częściowe'?1:0); if(r(a)!==r(b)) return r(a)-r(b); return new Date(b.o[SCHEMA.COL.created]) - new Date(a.o[SCHEMA.COL.created]);});
 
-  // sort: dostarczone na dół, reszta malejąco datą
-  groups.sort((a,b)=>{
-    const r = v => v.s.stat==='dostarczone'?2 : v.s.stat==='częściowe'?1 : 0;
-    if(r(a)!==r(b)) return r(a)-r(b);
-    return new Date(b.o.created_at)-new Date(a.o.created_at);
-  });
-
-  const html = groups.map(g=>{
-    const cls = g.s.stat==='dostarczone'?'done':(g.s.stat==='częściowe'?'part':'new');
-    const head = `
-      <div class="row">
-        <span class="badge">${g.s.stat}</span>
-        <b>${(g.o.created_at||'').slice(0,10)}</b>
-        <span>${g.o.client||g.o.klient||''}</span>
-        <span class="muted">• ${(g.o.phone||g.o.telefon)||''}</span>
-        <span class="pill">Pozostało: ${g.s.remaining}</span>
-        <div class="right">
-          <select class="ord-status" data-id="${g.o.id}">
-            <option ${g.o.status==='zamówione'?'selected':''}>zamówione</option>
-            <option ${g.o.status==='częściowe'?'selected':''}>częściowe</option>
-            <option ${g.o.status==='dostarczone'?'selected':''}>dostarczone</option>
-          </select>
-          <button class="danger ord-del" data-id="${g.o.id}">Usuń</button>
-        </div>
-      </div>`;
-    const rows = g.its.map(p=>{
-      const ord = Number(p.ordered_qty ?? p.ilosc)||0;
-      const del = Number(p.delivered_qty||0);
-      const left = Math.max(0, ord-del);
+  const html=groups.map(g=>{
+    const cls=g.s.stat==='dostarczone'?'done':(g.s.stat==='częściowe'?'part':'new');
+    const head=`<div class="row">
+      <span class="badge">${g.s.stat}</span>
+      <b>${String(g.o[SCHEMA.COL.created]||'').slice(0,10)}</b>
+      <span>${g.o[SCHEMA.COL.client]||''}</span>
+      <span class="muted">• ${g.o[SCHEMA.COL.phone]||''}</span>
+      <span class="pill">Pozostało: ${g.s.remaining}</span>
+      <div class="right">
+        <select class="ord-status" data-id="${g.o.id}">
+          <option ${g.o.status==='zamówione'?'selected':''}>zamówione</option>
+          <option ${g.o.status==='częściowe'?'selected':''}>częściowe</option>
+          <option ${g.o.status==='dostarczone'?'selected':''}>dostarczone</option>
+        </select>
+        <button class="danger ord-del" data-id="${g.o.id}">Usuń</button>
+      </div>
+    </div>`;
+    const rows=g.its.map(p=>{
+      const ord=Number(p.ordered_qty??p.ilosc)||0, del=Number(p.delivered_qty||0), left=Math.max(0,ord-del);
       return `<tr>
         <td>${p.kategoria||''} • ${p.odmiana||''}</td>
         <td style="text-align:right">${ord}</td>
         <td style="text-align:right">${del}</td>
         <td style="text-align:right">${left}</td>
-        <td style="width:130px">
-          <div class="row" style="gap:6px;justify-content:flex-end">
-            <input class="ship" data-id="${p.id}" type="number" min="1" value="1" style="width:70px">
-            <button class="ship-ok" data-id="${p.id}">OK</button>
-          </div>
-        </td>
+        <td style="width:130px"><div class="row" style="gap:6px;justify-content:flex-end">
+          <input class="ship" data-id="${p.id}" type="number" min="1" value="1" style="width:70px">
+          <button class="ship-ok" data-id="${p.id}">OK</button>
+        </div></td>
         <td><button class="edit-it" data-id="${p.id}">Edytuj</button></td>
       </tr>`;
     }).join('');
-    return `<div class="ord ${cls}">
-      ${head}
-      <div style="margin-top:8px">
-        <table>
-          <thead><tr><th>Odmiana</th><th>Zamówiono</th><th>Wydano</th><th>Pozostało</th><th>Wydaj</th><th>Edytuj</th></tr></thead>
-          <tbody>${rows||`<tr><td colspan="6" class="muted">Brak pozycji</td></tr>`}</tbody>
-        </table>
-      </div>
-    </div>`;
+    return `<div class="ord ${cls}">${head}
+      <div style="margin-top:8px"><table>
+        <thead><tr><th>Odmiana</th><th>Zamówiono</th><th>Wydano</th><th>Pozostało</th><th>Wydaj</th><th>Edytuj</th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="6" class="muted">Brak pozycji</td></tr>`}</tbody>
+      </table></div></div>`;
   }).join('');
   $('#o_list').innerHTML = html || `<div class="muted">Brak zamówień</div>`;
 
-  // akcje
-  $$('.ord-status').forEach(s=>s.addEventListener('change', async e=>{
-    const id=e.target.getAttribute('data-id'); await supa.from('seedorders_orders').update({status:e.target.value}).eq('id',id); loadOrders();
-  }));
-  $$('.ord-del').forEach(b=>b.addEventListener('click', async e=>{
-    const id=e.target.getAttribute('data-id'); if(!confirm('Usunąć zamówienie?')) return;
-    await supa.from('seedorders_items').delete().eq('order_id',id);
-    await supa.from('seedorders_orders').delete().eq('id',id);
-    loadOrders();
-  }));
-  $$('.ship-ok').forEach(b=>b.addEventListener('click', onShip));
-  $$('.edit-it').forEach(b=>b.addEventListener('click', onEditItem));
+  $$('.ord-status').forEach(s=>s.addEventListener('change',async e=>{const id=e.target.dataset.id; await supa.from(SCHEMA.ORDERS_TBL).update({status:e.target.value}).eq('id',id); loadOrders();}));
+  $$('.ord-del').forEach(b=>b.addEventListener('click',async e=>{const id=e.target.dataset.id; if(!confirm('Usunąć zamówienie?'))return; await supa.from(SCHEMA.ITEMS_TBL).delete().eq('order_id',id); await supa.from(SCHEMA.ORDERS_TBL).delete().eq('id',id); loadOrders();}));
+  $$('.ship-ok').forEach(b=>b.addEventListener('click',onShip));
+  $$('.edit-it').forEach(b=>b.addEventListener('click',onEditItem));
 }
-
 async function onShip(e){
-  const id=e.target.getAttribute('data-id');
-  const inp=document.querySelector(`input.ship[data-id="${id}"]`);
-  const delta = Number(inp.value||0); if(delta<=0) return;
-  const cur = await supa.from('seedorders_items').select('*').eq('id',id).single();
+  const id=e.target.dataset.id; const cur=await supa.from(SCHEMA.ITEMS_TBL).select('*').eq('id',id).single();
   if(cur.error||!cur.data) return alert('Nie znaleziono pozycji');
-  const ord = Number(cur.data.ordered_qty ?? cur.data.ilosc)||0;
-  const del = Number(cur.data.delivered_qty||0);
-  const next = Math.min(ord, del+delta);
-  await supa.from('seedorders_items').update({delivered_qty:next}).eq('id',id);
-
-  // przelicz status zamówienia
-  const its = (await supa.from('seedorders_items').select('*').eq('order_id',cur.data.order_id)).data||[];
-  const s = computeStatus(its);
-  await supa.from('seedorders_orders').update({status:s.stat}).eq('id',cur.data.order_id);
-  loadOrders();
+  const inp=document.querySelector(`input.ship[data-id="${id}"]`); const delta=Number(inp.value||0); if(delta<=0) return;
+  const ord=Number(cur.data.ordered_qty??cur.data.ilosc)||0; const del=Number(cur.data.delivered_qty||0); const next=Math.min(ord,del+delta);
+  await supa.from(SCHEMA.ITEMS_TBL).update({delivered_qty:next}).eq('id',id);
+  const its=(await supa.from(SCHEMA.ITEMS_TBL).select('*').eq('order_id',cur.data.order_id)).data||[]; const s=computeStatus(its);
+  await supa.from(SCHEMA.ORDERS_TBL).update({status:s.stat}).eq('id',cur.data.order_id); loadOrders();
 }
 async function onEditItem(e){
-  const id=e.target.getAttribute('data-id');
-  const rec = await supa.from('seedorders_items').select('*').eq('id',id).single();
+  const id=e.target.dataset.id; const rec=await supa.from(SCHEMA.ITEMS_TBL).select('*').eq('id',id).single();
   if(rec.error||!rec.data) return alert('Nie znaleziono pozycji');
-  const qty = prompt(`Nowa ilość dla ${rec.data.kategoria||''} • ${rec.data.odmiana||''}`, rec.data.ordered_qty ?? rec.data.ilosc ?? 1);
-  if(qty===null) return;
-  const price = prompt('Nowa cena (opcjonalnie)', rec.data.cena ?? '');
-  const patch = { ilosc:Number(qty)||0 };
-  if(price!==null && price!=='') patch.cena = Number(price)||0;
-  await supa.from('seedorders_items').update(patch).eq('id',id);
-  loadOrders();
+  const qty=prompt(`Nowa ilość dla ${rec.data.kategoria||''} • ${rec.data.odmiana||''}`, rec.data.ordered_qty ?? rec.data.ilosc ?? 1);
+  if(qty===null) return; const price=prompt('Nowa cena (opcjonalnie)', rec.data.cena ?? '');
+  const patch={ ilosc:Number(qty)||0 }; if(price!==null && price!=='') patch.cena=Number(price)||0;
+  await supa.from(SCHEMA.ITEMS_TBL).update(patch).eq('id',id); loadOrders();
 }
-$('#o_reload').addEventListener('click', loadOrders);
-$('#o_search').addEventListener('input', renderOrders);
-$('#o_status').addEventListener('change', renderOrders);
+$('#o_reload').addEventListener('click',loadOrders);
+$('#o_search').addEventListener('input',renderOrders);
+$('#o_status').addEventListener('change',renderOrders);
 
-/* === 6) RAPORTY === */
-function setDefaultDates(){
-  const d=new Date(); const f=new Date(d.getFullYear(), d.getMonth(), 1);
-  $('#r_from').value=f.toISOString().slice(0,10);
-  $('#r_to').value=d.toISOString().slice(0,10);
-  $('#r_year').value=d.getFullYear();
-}
+/* ===== RAPORTY ===== */
+function setDefaultDates(){const d=new Date();const f=new Date(d.getFullYear(),d.getMonth(),1);$('#r_from').value=f.toISOString().slice(0,10);$('#r_to').value=d.toISOString().slice(0,10);$('#r_year').value=d.getFullYear();}
 async function runReport(showMissing){
-  // map order_id -> created_at
-  const ord = (await supa.from('seedorders_orders').select('id,created_at')).data||[];
-  const id2date=new Map(ord.map(o=>[o.id,(o.created_at||'').slice(0,10)]));
-  const its = (await supa.from('seedorders_items').select('*')).data||[];
-  const from=$('#r_from').value, to=$('#r_to').value;
-  const cat=$('#r_cat').value;
-
-  const list = its.filter(i=>{
-    const d=id2date.get(i.order_id)||''; if(!d) return false;
-    if(from && d<from) return false;
-    if(to && d>to) return false;
-    if(cat!=='(Wszystkie)' && i.kategoria!==cat) return false;
-    return true;
-  });
-
-  // agregacja
-  const key = x=>`${x.kategoria}|||${x.odmiana}`;
-  const map=new Map();
-  list.forEach(i=>{
-    const k=key(i); if(!map.has(k)) map.set(k,{kategoria:i.kategoria,odmiana:i.odmiana,zam:0,wyd:0});
-    const r=map.get(k); r.zam += Number(i.ordered_qty ?? i.ilosc)||0; r.wyd += Number(i.delivered_qty||0)||0;
-  });
-  let rows=[...map.values()].map(r=>({...r, poz:Math.max(0,r.zam-r.wyd)}));
-  if(showMissing) rows = rows.filter(r=>r.poz>0);
-  rows.sort((a,b)=> a.kategoria.localeCompare(b.kategoria) || a.odmiana.localeCompare(b.odmiana));
-  const sum = rows.reduce((s,r)=>({zam:s.zam+r.zam,wyd:s.wyd+r.wyd,poz:s.poz+r.poz}),{zam:0,wyd:0,poz:0});
-
-  const html = rows.length
-    ? `<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th>Zamówiono</th><th>Wydano</th><th>Pozostało</th></tr></thead>
-       <tbody>${rows.map(r=>`<tr><td>${r.kategoria}</td><td>${r.odmiana}</td><td>${r.zam}</td><td>${r.wyd}</td><td>${r.poz}</td></tr>`).join('')}</tbody>
-       <tfoot><tr><th colspan="2" style="text-align:right">RAZEM</th><th>${sum.zam}</th><th>${sum.wyd}</th><th>${sum.poz}</th></tr></tfoot>
-       </table>
-       <div class="muted">Zakres: ${from||'—'} – ${to||'—'}</div>`
-    : `<div class="muted">Brak danych dla wybranych filtrów.</div>`;
-  $('#r_out').innerHTML = html;
+  const ord=(await supa.from(SCHEMA.ORDERS_TBL).select(`id, ${SCHEMA.COL.created}`)).data||[];
+  const id2date=new Map(ord.map(o=>[o.id,String(o[SCHEMA.COL.created]||'').slice(0,10)]));
+  const its=(await supa.from(SCHEMA.ITEMS_TBL).select('*')).data||[];
+  const from=$('#r_from').value,to=$('#r_to').value,cat=$('#r_cat').value;
+  const list=its.filter(i=>{const d=id2date.get(i.order_id)||''; if(!d) return false; if(from && d<from) return false; if(to && d>to) return false; if(cat!=='(Wszystkie)' && i.kategoria!==cat) return false; return true;});
+  const map=new Map(); const key=x=>`${x.kategoria}|||${x.odmiana}`;
+  list.forEach(i=>{const k=key(i); if(!map.has(k)) map.set(k,{kategoria:i.kategoria,odmiana:i.odmiana,zam:0,wyd:0}); const r=map.get(k); r.zam+=Number(i.ordered_qty??i.ilosc)||0; r.wyd+=Number(i.delivered_qty||0)||0;});
+  let rows=[...map.values()].map(r=>({...r,poz:Math.max(0,r.zam-r.wyd)})); if(showMissing) rows=rows.filter(r=>r.poz>0);
+  rows.sort((a,b)=>a.kategoria.localeCompare(b.kategoria)||a.odmiana.localeCompare(b.odmiana));
+  const sum=rows.reduce((s,r)=>({zam:s.zam+r.zam,wyd:s.wyd+r.wyd,poz:s.poz+r.poz}),{zam:0,wyd:0,poz:0});
+  $('#r_out').innerHTML=rows.length?`<table><thead><tr><th>Kategoria</th><th>Odmiana</th><th>Zamówiono</th><th>Wydano</th><th>Pozostało</th></tr></thead><tbody>${
+    rows.map(r=>`<tr><td>${r.kategoria}</td><td>${r.odmiana}</td><td>${r.zam}</td><td>${r.wyd}</td><td>${r.poz}</td></tr>`).join('')
+  }</tbody><tfoot><tr><th colspan="2" style="text-align:right">RAZEM</th><th>${sum.zam}</th><th>${sum.wyd}</th><th>${sum.poz}</th></tr></tfoot></table><div class="muted">Zakres: ${from||'—'} – ${to||'—'}</div>`:`<div class="muted">Brak danych dla wybranych filtrów.</div>`;
 }
-$('#r_sums').addEventListener('click', ()=>runReport(false));
-$('#r_missing').addEventListener('click', ()=>runReport(true));
-$('#r_csv').addEventListener('click', ()=>{
-  const tbl=$('#r_out table'); if(!tbl){ alert('Najpierw wyświetl raport.'); return; }
-  const rows = Array.from(tbl.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(td=>('"'+td.textContent.replace(/"/g,'""')+'"')).join(','));
-  const blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='raport.csv'; a.click();
-});
-$('#r_year_btn').addEventListener('click', async ()=>{
-  const y=Number($('#r_year').value||new Date().getFullYear());
-  const from=`${y}-01-01`, to=`${y}-12-31`;
-  const ord = (await supa.from('seedorders_orders').select('*').gte('created_at',from).lte('created_at',to)).data||[];
-  const its = (await supa.from('seedorders_items').select('*').gte('created_at',from).lte('created_at',to)).data||[];
-  const byClient={};
-  ord.forEach(o=>{
-    const name=o.client||o.klient||'(brak nazwy)';
-    const list=its.filter(i=>i.order_id===o.id).map(i=>`${i.kategoria||''} • ${i.odmiana||''}: zam. ${Number(i.ordered_qty??i.ilosc)||0}, wyd. ${Number(i.delivered_qty||0)||0}`);
-    if(list.length){ byClient[name]=(byClient[name]||[]).concat(list); }
-  });
-  const html = Object.keys(byClient).length
-    ? Object.entries(byClient).map(([k,arr])=>`<div class="card"><b>${k}</b><ul>${arr.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('')
-    : `<div class="muted">Brak danych w roku ${y}.</div>`;
-  $('#r_out').innerHTML = html; $('#r_info').textContent=`Rok: ${y}`;
-});
+$('#r_sums').addEventListener('click',()=>runReport(false));
+$('#r_missing').addEventListener('click',()=>runReport(true));
+$('#r_csv').addEventListener('click',()=>{const tbl=$('#r_out table'); if(!tbl){alert('Najpierw wyświetl raport.');return;} const rows=Array.from(tbl.querySelectorAll('tr')).map(tr=>Array.from(tr.children).map(td=>('"'+td.textContent.replace(/"/g,'""')+'"')).join(',')); const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='raport.csv'; a.click();});
+$('#r_year_btn').addEventListener('click',async()=>{const y=Number($('#r_year').value||new Date().getFullYear()); const from=`${y}-01-01`,to=`${y}-12-31`; const T=SCHEMA.ORDERS_TBL,IT=SCHEMA.ITEMS_TBL,C=SCHEMA.COL;
+  const ord=(await supa.from(T).select(`id, ${C.client}, ${C.created}`)).data||[]; const its=(await supa.from(IT).select('*')).data||[];
+  const byClient={}; ord.forEach(o=>{const name=o[C.client]||'(brak nazwy)'; const d=String(o[C.created]||'').slice(0,10); if(d<from||d>to) return; const list=its.filter(i=>i.order_id===o.id).map(i=>`${i.kategoria||''} • ${i.odmiana||''}: zam. ${Number(i.ordered_qty??i.ilosc)||0}, wyd. ${Number(i.delivered_qty||0)||0}`); if(list.length){byClient[name]=(byClient[name]||[]).concat(list);}});
+  const html=Object.keys(byClient).length?Object.entries(byClient).map(([k,arr])=>`<div class="card"><b>${k}</b><ul>${arr.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join(''):`<div class="muted">Brak danych w roku ${y}.</div>`; $('#r_out').innerHTML=html; $('#r_info').textContent=`Rok: ${y}`;});
 
-/* === 7) START === */
-function setDefaults(){
-  // sekcje domyślnie zwinięte już są (class="hide"), tylko ustaw tekst linków
-  $('#p_toggle').textContent='Pokaż';
-  $('#c_toggleHead').textContent='Pokaż';
-  // daty
-  const d=new Date(); const f=new Date(d.getFullYear(), d.getMonth(),1);
-  $('#r_from').value=f.toISOString().slice(0,10);
-  $('#r_to').value=d.toISOString().slice(0,10);
+/* ===== START ===== */
+async function start(){
+  try{
+    await detectSchema();
+    setDefaultDates();
+    await Promise.all([loadPrices(), loadClients()]);
+    await loadOrders();
+  }catch(e){ console.error(e); setStatus(false, e.message||'błąd'); }
 }
-async function loadAll(){
-  await Promise.all([loadPrices(), loadClients()]);
-  refreshOrderDatalist();
-  await loadOrders();
-}
-if(supa){ setDefaults(); loadAll().catch(console.error); } else { setStatus(false); }
+function setDefaultDates(){const d=new Date();const f=new Date(d.getFullYear(),d.getMonth(),1);$('#r_from').value=f.toISOString().slice(0,10);$('#r_to').value=d.toISOString().slice(0,10);$('#r_year').value=d.getFullYear();}
+start();
 </script>
 </body>
 </html>
+
